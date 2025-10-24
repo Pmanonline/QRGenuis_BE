@@ -1472,6 +1472,9 @@ export const buyerConfirmsProduct = async (
   }
 };
 
+
+
+
 export const cancelEscrowProductTransaction = async (
   req: Request,
   res: Response,
