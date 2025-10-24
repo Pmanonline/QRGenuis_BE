@@ -13,7 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateIndividualUser = exports.getIndividualUser = void 0;
-const individualUserAuth_model1_1 = __importDefault(require("../../authentication/individualUserAuth/individualUserAuth.model1"));
+const individualUserAuth_model_1 = __importDefault(require("../../authentication/individualUserAuth/individualUserAuth.model"));
 const organizationAuth_model_1 = __importDefault(require("../../authentication/organizationUserAuth/organizationAuth.model"));
 /** GET: http://localhost:5000/users/user/:user_id */
 const getIndividualUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -54,7 +54,7 @@ const updateIndividualUser = (req, res) => __awaiter(void 0, void 0, void 0, fun
     const { userData } = res.locals.user;
     const { phone_number, name, contact_email, contact_number } = req.body;
     if (userData.role === "ind") {
-        const updatedUser = yield individualUserAuth_model1_1.default.findOneAndUpdate({ email: userData.email }, { name, phone_number });
+        const updatedUser = yield individualUserAuth_model_1.default.findOneAndUpdate({ email: userData.email }, { name, phone_number });
         return res.status(200).json({
             message: "Individual user sucessfully updated",
             updatedUser,

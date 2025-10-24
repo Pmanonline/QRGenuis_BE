@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const individualUserAuth_model1_1 = __importDefault(require("../modules/authentication/individualUserAuth/individualUserAuth.model1"));
+const individualUserAuth_model_1 = __importDefault(require("../modules/authentication/individualUserAuth/individualUserAuth.model"));
 const organizationAuth_model_1 = __importDefault(require("../modules/authentication/organizationUserAuth/organizationAuth.model"));
 const protectRoutes = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const user = res.locals.user;
@@ -21,7 +21,7 @@ const protectRoutes = (req, res, next) => __awaiter(void 0, void 0, void 0, func
     }
     try {
         const userExists = user.role === "ind" || user.role === "g-ind"
-            ? yield individualUserAuth_model1_1.default.findOne({ email: user.userData.email })
+            ? yield individualUserAuth_model_1.default.findOne({ email: user.userData.email })
             : yield organizationAuth_model_1.default.findOne({
                 organization_email: user.userData.organization_email,
             });

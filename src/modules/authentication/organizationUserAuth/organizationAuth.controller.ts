@@ -5,7 +5,7 @@ import crypto from "crypto";
 import catchAsync from "../../../utilities/catchAsync";
 import AppError from "../../../utilities/appError";
 import { sendVerificationEmail } from "../../../utilities/email.utils";
-import IndividualUser from "../individualUserAuth/individualUserAuth.model1";
+import IndividualUser from "../individualUserAuth/individualUserAuth.model";
 
 interface TokenPayload {
   id: string;
@@ -130,9 +130,7 @@ export const organizationUserSignup = async (req: Request, res: Response) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("Error registering the user:", error);
-    res
-      .status(500)
-      .json({ message: "Error registering the user", error });
+    res.status(500).json({ message: "Error registering the user", error });
   }
 };
 
@@ -152,7 +150,7 @@ export const organizationUserResetPassword = catchAsync(
     // 2) If token has not expired, and there is org, set the new password
     if (!org) {
       next(new AppError("Token is invalid or has expired", 400));
-      return
+      return;
     }
     org.password = req.body.password;
     org.passwordResetToken = undefined;

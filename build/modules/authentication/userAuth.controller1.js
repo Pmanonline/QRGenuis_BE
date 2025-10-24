@@ -63,7 +63,7 @@ const createSessionAndSendToken_util_1 = require("../../utilities/createSessionA
 const appError_1 = __importDefault(require("../../utilities/appError"));
 const catchAsync_1 = __importDefault(require("../../utilities/catchAsync"));
 const blacklistedToken_model_1 = require("../blacklistedTokens/blacklistedToken.model");
-const individualUserAuth_model1_1 = __importDefault(require("./individualUserAuth/individualUserAuth.model1"));
+const individualUserAuth_model_1 = __importDefault(require("./individualUserAuth/individualUserAuth.model"));
 const organizationAuth_model_1 = __importDefault(require("./organizationUserAuth/organizationAuth.model"));
 const crypto = __importStar(require("crypto"));
 const signToken = (id) => {
@@ -145,7 +145,7 @@ const UserLogin = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         });
     }
     try {
-        const individualUserToLogin = yield individualUserAuth_model1_1.default.findOne({
+        const individualUserToLogin = yield individualUserAuth_model_1.default.findOne({
             email,
         }).select("+password");
         const organizationUserToLogin = yield organizationAuth_model_1.default.findOne({
@@ -327,7 +327,7 @@ exports.OrganizationUserForgotPassword = (0, catchAsync_1.default)((req, res, ne
             organization_email: email,
         });
         // Check if the user exists in the individual model
-        const user = yield individualUserAuth_model1_1.default.findOne({
+        const user = yield individualUserAuth_model_1.default.findOne({
             email,
         });
         // If neither organization nor individual user is found, throw an error
@@ -364,7 +364,7 @@ exports.organizationUserResetPassword = (0, catchAsync_1.default)((req, res, nex
         passwordResetToken: hashedToken,
         passwordResetExpires: { $gt: Date.now() },
     });
-    const user = yield individualUserAuth_model1_1.default.findOne({
+    const user = yield individualUserAuth_model_1.default.findOne({
         passwordResetToken: hashedToken,
         // passwordResetExpires: { $gt: Date.now() },
     });
@@ -402,7 +402,7 @@ exports.organizationUserUpdatePassword = (0, catchAsync_1.default)((req, res, ne
             passwordResetToken: req.params.token,
             passwordResetExpires: { $gt: Date.now() },
         });
-        const user = yield individualUserAuth_model1_1.default.findOne({
+        const user = yield individualUserAuth_model_1.default.findOne({
             passwordResetToken: req.params.token,
             passwordResetExpires: { $gt: Date.now() },
         });
@@ -415,7 +415,7 @@ exports.organizationUserUpdatePassword = (0, catchAsync_1.default)((req, res, ne
     }
 }));
 const checkIfUserExist = (email) => __awaiter(void 0, void 0, void 0, function* () {
-    const individualUser = yield individualUserAuth_model1_1.default.findOne({
+    const individualUser = yield individualUserAuth_model_1.default.findOne({
         email,
     });
     if (individualUser)

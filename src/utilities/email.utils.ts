@@ -124,3 +124,50 @@ export const sendVerificationEmail = async (email: string, token: string) => {
     console.log(err);
   }
 };
+
+export const sendWelcomeEmail = async (email: string, name?: string) => {
+  try {
+    const transport = generateMailTransporter();
+    const firstName = name || email.split("@")[0];
+
+    const supportEmail = "mydoshbox@gmail.com";
+    const emailMessage = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Welcome to Doshbox!</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+        <tr>
+          <td align="center" style="padding: 20px;">
+            <h1 style="color: #007bff; margin-bottom: 20px;">Welcome to Doshbox!</h1>
+            <p style="font-size: 16px;">Hi <strong>${firstName}</strong>,</p>
+            <p style="font-size: 15px;">Your email has been successfully verified, and your Doshbox account is now active.</p>
+            <p style="font-size: 15px;">We’re excited to have you onboard! 🎉</p>
+            <p style="font-size: 15px;">Explore your dashboard, manage transactions, and enjoy a seamless experience.</p>
+            <p style="font-size: 15px;">If you have any questions or need help, feel free to reach out to 
+              <a href="mailto:${supportEmail}" style="color: #007bff;">${supportEmail}</a>.
+            </p>
+            <p style="margin-top: 30px; font-size: 14px; color: #555;">Best regards,<br><strong>The Doshbox Team</strong></p>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+    `;
+
+    await transport.sendMail({
+      to: email,
+      from: process.env.VERIFICATION_EMAIL,
+      subject: "Welcome to Doshbox!",
+      html: emailMessage,
+    });
+
+    console.log(`✅ Welcome email sent to ${email}`);
+  } catch (err) {
+    console.error("❌ Error sending welcome email:", err);
+  }
+};

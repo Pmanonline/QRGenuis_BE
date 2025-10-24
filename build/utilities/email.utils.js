@@ -12,25 +12,27 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendVerificationEmail = exports.sendURLEmail = exports.sendOtpEmail = exports.generateMailTransporter = void 0;
+exports.sendWelcomeEmail = exports.sendVerificationEmail = exports.sendURLEmail = exports.sendPasswordResetEmail = exports.sendOTPEmail = exports.generateMailTransporter = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const generateMailTransporter = () => {
     const transport = nodemailer_1.default.createTransport({
-        service: "Gmail",
         host: "smtp.gmail.com",
-        port: 456,
-        secure: true,
+        port: 587,
+        secure: false,
         auth: {
             user: process.env.EMAIL_USERNAME,
             pass: process.env.EMAIL_PASSWORD,
+        },
+        tls: {
+            rejectUnauthorized: false,
         },
     });
     return transport;
 };
 exports.generateMailTransporter = generateMailTransporter;
-const sendOtpEmail = (otp, email) => __awaiter(void 0, void 0, void 0, function* () {
+const sendOTPEmail = (otp, email) => __awaiter(void 0, void 0, void 0, function* () {
     const transport = (0, exports.generateMailTransporter)();
     // const { email, message: customMessage } = options; // Renamed the variable to avoid conflict
     const emailMessage = `Hi, we just received a request that you forgot your password. Here is your OTP to create a new password: ${otp}`;
@@ -41,7 +43,18 @@ const sendOtpEmail = (otp, email) => __awaiter(void 0, void 0, void 0, function*
         html: emailMessage, // Assign the HTML string directly to the html property
     });
 });
-exports.sendOtpEmail = sendOtpEmail;
+exports.sendOTPEmail = sendOTPEmail;
+const sendPasswordResetEmail = (resetUrl, email) => __awaiter(void 0, void 0, void 0, function* () {
+    const transport = (0, exports.generateMailTransporter)();
+    const emailMessage = `Hi, we just received a request that you forgot your password. Here is your OTP to create a new password: ${resetUrl}`;
+    transport.sendMail({
+        to: email,
+        from: process.env.VERIFICATION_EMAIL,
+        subject: "Reset Password link",
+        html: emailMessage, // Assign the HTML string directly to the html property
+    });
+});
+exports.sendPasswordResetEmail = sendPasswordResetEmail;
 const sendURLEmail = (email, resetURL) => __awaiter(void 0, void 0, void 0, function* () {
     // const validEmails = email.filter(Boolean) as string[];
     const transport = (0, exports.generateMailTransporter)();
@@ -58,10 +71,7 @@ exports.sendURLEmail = sendURLEmail;
 const sendVerificationEmail = (email, token) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const transport = (0, exports.generateMailTransporter)();
-        // const verificationURL = `https://mydoshbox.vercel.app/auth/verify-email?token=${token}`;
         const verificationURL = `${process.env.DEPLOYED_FRONTEND_BASE_URL}/auth/verify-email?token=${token}`;
-        // const verificationURL = `${process.env.LOCAL_FRONTEND_BASE_URL}/auth/verify-email?token=${token}`;
-        // const verificationURL = `http://localhost:3000/auth/verify-email?token=${token}`;
         console.log(verificationURL);
         const supportEmail = "mydoshbox@gmail.com";
         const emailMessage = `
@@ -116,3 +126,48 @@ const sendVerificationEmail = (email, token) => __awaiter(void 0, void 0, void 0
     }
 });
 exports.sendVerificationEmail = sendVerificationEmail;
+const sendWelcomeEmail = (email, name) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const transport = (0, exports.generateMailTransporter)();
+        const firstName = name || email.split("@")[0];
+        const supportEmail = "mydoshbox@gmail.com";
+        const emailMessage = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Welcome to Doshbox!</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+        <tr>
+          <td align="center" style="padding: 20px;">
+            <h1 style="color: #007bff; margin-bottom: 20px;">Welcome to Doshbox!</h1>
+            <p style="font-size: 16px;">Hi <strong>${firstName}</strong>,</p>
+            <p style="font-size: 15px;">Your email has been successfully verified, and your Doshbox account is now active.</p>
+            <p style="font-size: 15px;">We’re excited to have you onboard! 🎉</p>
+            <p style="font-size: 15px;">Explore your dashboard, manage transactions, and enjoy a seamless experience.</p>
+            <p style="font-size: 15px;">If you have any questions or need help, feel free to reach out to 
+              <a href="mailto:${supportEmail}" style="color: #007bff;">${supportEmail}</a>.
+            </p>
+            <p style="margin-top: 30px; font-size: 14px; color: #555;">Best regards,<br><strong>The Doshbox Team</strong></p>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+    `;
+        yield transport.sendMail({
+            to: email,
+            from: process.env.VERIFICATION_EMAIL,
+            subject: "Welcome to Doshbox!",
+            html: emailMessage,
+        });
+        console.log(`✅ Welcome email sent to ${email}`);
+    }
+    catch (err) {
+        console.error("❌ Error sending welcome email:", err);
+    }
+});
+exports.sendWelcomeEmail = sendWelcomeEmail;

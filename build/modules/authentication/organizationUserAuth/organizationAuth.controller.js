@@ -19,7 +19,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const catchAsync_1 = __importDefault(require("../../../utilities/catchAsync"));
 const appError_1 = __importDefault(require("../../../utilities/appError"));
 const email_utils_1 = require("../../../utilities/email.utils");
-const individualUserAuth_model1_1 = __importDefault(require("../individualUserAuth/individualUserAuth.model1"));
+const individualUserAuth_model_1 = __importDefault(require("../individualUserAuth/individualUserAuth.model"));
 const signToken = (id) => {
     const payload = { id };
     return jsonwebtoken_1.default.sign(payload, process.env.JWT_SECRET, {
@@ -83,7 +83,7 @@ const organizationUserSignup = (req, res) => __awaiter(void 0, void 0, void 0, f
                 message: "Passwords do not match",
             });
         }
-        const individualEmailAlreadyExist = yield individualUserAuth_model1_1.default.findOne({
+        const individualEmailAlreadyExist = yield individualUserAuth_model_1.default.findOne({
             email: organization_email,
         });
         const organizationEmailAlreadyExist = yield organizationAuth_model_1.default.findOne({
@@ -120,9 +120,7 @@ const organizationUserSignup = (req, res) => __awaiter(void 0, void 0, void 0, f
     }
     catch (error) {
         console.error("Error registering the user:", error);
-        res
-            .status(500)
-            .json({ message: "Error registering the user", error });
+        res.status(500).json({ message: "Error registering the user", error });
     }
 });
 exports.organizationUserSignup = organizationUserSignup;

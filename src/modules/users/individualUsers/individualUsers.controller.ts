@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import IndividualUser from "../../authentication/individualUserAuth/individualUserAuth.model1";
+import IndividualUser from "../../authentication/individualUserAuth/individualUserAuth.model";
 import OrganizationModel from "../../authentication/organizationUserAuth/organizationAuth.model";
 
 /** GET: http://localhost:5000/users/user/:user_id */

@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.mediatorResolveDispute = exports.getAllDisputeForAMediator = exports.involveAMediator = exports.getAllMediators = exports.mediatorLogin = exports.onboardAMediator = void 0;
+exports.mediatorResolveDispute = exports.getAllDisputeForAMediator = exports.involveAMediator = exports.mediatorLogin = void 0;
 const validation_utilities_1 = require("../../utilities/validation.utilities");
 const mediator_model_1 = __importDefault(require("./mediator.model"));
 const errorHandling_middleware_1 = require("../../middlewares/errorHandling.middleware");
@@ -33,50 +33,83 @@ const createSessionAndSendToken_util_1 = require("../../utilities/createSessionA
 const productDispute_model_1 = __importDefault(require("../disputes/productsDispute/productDispute.model"));
 // import ProductResolution from "../disputes/productsDispute/productResolution.model";
 const productDispute_mail_1 = require("../disputes/productsDispute/productDispute.mail");
+// move unboard and get all mediator to admin module//
 // this works but its not returning any response in its body
-const onboardAMediator = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { first_name, middle_name, last_name, mediator_email, mediator_phone_number, password, } = req.body;
-    (0, validation_utilities_1.validateFormFields)({
-        first_name,
-        // middle_name,
-        last_name,
-        mediator_email,
-        // mediator_phone_number,
-        password,
-    }, next);
-    try {
-        // check if mediator exist
-        const findMediator = yield mediator_model_1.default.findOne({
-            mediator_email: mediator_email,
-        });
-        // console.log(findMediator);
-        if (findMediator) {
-            return next((0, errorHandling_middleware_1.errorHandler)(400, "Mediator already exist, please proceed to login"));
-        }
-        const hashedPassword = bcrypt_1.default.hashSync(password, 10);
-        // console.log(hashedPassword);
-        const addNewMediatorToSystem = new mediator_model_1.default({
-            first_name,
-            // middle_name,
-            last_name,
-            mediator_email,
-            mediator_phone_number,
-            password: hashedPassword,
-        });
-        yield addNewMediatorToSystem.save();
-        yield (0, mediator_mail_1.sendMediatorLoginDetailsMail)(first_name, mediator_email, password);
-        res.status(200).json({
-            // addNewMediatorToSystem,
-            status: "success",
-            message: "Mediator has been added successfully and a mail sent",
-        });
-    }
-    catch (error) {
-        console.error("Error adding mediator: ", error);
-        return next((0, errorHandling_middleware_1.errorHandler)(500, "Internal server error"));
-    }
-});
-exports.onboardAMediator = onboardAMediator;
+// export const onboardAMediator = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   const {
+//     first_name,
+//     middle_name,
+//     last_name,
+//     mediator_email,
+//     mediator_phone_number,
+//     password,
+//   } = req.body;
+//   validateFormFields(
+//     {
+//       first_name,
+//       // middle_name,
+//       last_name,
+//       mediator_email,
+//       // mediator_phone_number,
+//       password,
+//     },
+//     next
+//   );
+//   try {
+//     // check if mediator exist
+//     const findMediator = await MediatorModel.findOne({
+//       mediator_email: mediator_email,
+//     });
+//     // console.log(findMediator);
+//     if (findMediator) {
+//       return next(
+//         errorHandler(400, "Mediator already exist, please proceed to login")
+//       );
+//     }
+//     const hashedPassword = bcrypt.hashSync(password, 10);
+//     // console.log(hashedPassword);
+//     const addNewMediatorToSystem = new MediatorModel({
+//       first_name,
+//       // middle_name,
+//       last_name,
+//       mediator_email,
+//       mediator_phone_number,
+//       password: hashedPassword,
+//     });
+//     await addNewMediatorToSystem.save();
+//     await sendMediatorLoginDetailsMail(first_name, mediator_email, password);
+//     res.status(200).json({
+//       // addNewMediatorToSystem,
+//       status: "success",
+//       message: "Mediator has been added successfully and a mail sent",
+//     });
+//   } catch (error: unknown) {
+//     console.error("Error adding mediator: ", error);
+//     return next(errorHandler(500, "Internal server error"));
+//   }
+// };
+// export const getAllMediators = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   const fetchAllMediators = await MediatorModel.find()
+//     .select("-password")
+//     .sort({ createdAt: -1 });
+//   if (fetchAllMediators?.length === 0) {
+//     return next(errorHandler(404, "no mediators present in the system"));
+//   } else {
+//     res.json({
+//       fetchAllMediators,
+//       status: "success",
+//       message: "All mediators fetched successfully",
+//     });
+//   }
+// };
 const mediatorLogin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { mediator_email, password } = req.body;
     (0, validation_utilities_1.validateFormFields)({
@@ -116,22 +149,6 @@ const mediatorLogin = (req, res, next) => __awaiter(void 0, void 0, void 0, func
     // You can now use mediatorWithoutPassword as needed
 });
 exports.mediatorLogin = mediatorLogin;
-const getAllMediators = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const fetchAllMediators = yield mediator_model_1.default.find()
-        .select("-password")
-        .sort({ createdAt: -1 });
-    if ((fetchAllMediators === null || fetchAllMediators === void 0 ? void 0 : fetchAllMediators.length) === 0) {
-        return next((0, errorHandling_middleware_1.errorHandler)(404, "no mediators present in the system"));
-    }
-    else {
-        res.json({
-            fetchAllMediators,
-            status: "success",
-            message: "All mediators fetched successfully",
-        });
-    }
-});
-exports.getAllMediators = getAllMediators;
 const involveAMediator = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { transaction_id } = req.params;
     if (!transaction_id) {

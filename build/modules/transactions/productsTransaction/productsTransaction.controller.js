@@ -12,265 +12,170 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cancelEscrowProductTransaction = exports.buyerConfirmsProduct = exports.getAllShippingDetails = exports.sellerFillOutShippingDetails = exports.getAllEscrowProductTransactionByUser = exports.verifyEscrowProductTransactionPayment = exports.initiateEscrowProductTransaction = void 0;
+exports.cancelEscrowProductTransaction = exports.buyerConfirmsProduct = exports.getAllShippingDetailsWithAggregation = exports.getAllShippingDetails = exports.getAllEscrowProductTransactionByUser = exports.sellerFillOutShippingDetails = exports.verifyEscrowProductTransactionPayment = exports.sellerConfirmsAnEscrowProductTransaction = exports.initiateEscrowProductTransaction = void 0;
 const uuid_1 = require("uuid");
-// import jwt, { JwtPayload } from "jsonwebtoken";
-// import { createSessionAndSendTokens } from "../../../utilities/createSessionAndSendToken.util";
 const productsTransaction_validation_1 = require("./productsTransaction.validation");
-// import { Product } from "../models/Product"; // Import the Product model
-const individualUserAuth_model1_1 = __importDefault(require("../../authentication/individualUserAuth/individualUserAuth.model1")); // Import the User model
-// import { OrganizationUser } from "../../authentication/organizationUserAuth/organizationAuth.model"; // Import the User model
-const errorHandling_middleware_1 = require("../../../middlewares/errorHandling.middleware"); // Import your CustomError class
+const individualUserAuth_model_1 = __importDefault(require("../../authentication/individualUserAuth/individualUserAuth.model"));
+const errorHandling_middleware_1 = require("../../../middlewares/errorHandling.middleware");
 const productsTransaction_model_1 = __importDefault(require("./productsTransaction.model"));
-// import axios from "axios";
 const productsTransaction_paystack_1 = require("./productsTransaction.paystack");
 const productTransaction_mail_1 = require("./productTransaction.mail");
-// import { sendVerificationEmail } from "../../../utilities/email.utils";
 const shippingDetails_model_1 = __importDefault(require("./shippingDetails.model"));
 const productDispute_model_1 = __importDefault(require("../../disputes/productsDispute/productDispute.model"));
-const productsTransaction_model_2 = __importDefault(require("./productsTransaction.model"));
-// import mongoose, { SchemaTypes } from "mongoose";
-// import {
-//   sendEscrowInitiationEmail,
-//   sendEscrowInitiationEmailToVendor,
-// } from "./productTransaction.mail";
-// import { sendEmail } from "../utils/email"; // Import your email utility
-const initiateEscrowProductTransaction = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { 
-    // transaction_id,
-    vendor_name, vendor_phone_number, buyer_email, // get it from the frontend
-    vendor_email, transaction_type, product_name, 
-    // product_category,
-    product_quantity, product_price, transaction_total, product_image, product_description, signed_escrow_doc, delivery_address,
-    // transaction_status,
-    // payment_status,
-    // profit_made,
-     } = req.body;
-    // Validate required fields
-    (0, productsTransaction_validation_1.validateProductFields)({
-        // transaction_id,
-        vendor_name,
-        vendor_phone_number,
-        // buyer_email,
-        vendor_email,
-        transaction_type,
-        product_name,
-        // product_category,
-        product_quantity,
-        product_price,
-        transaction_total,
-        product_image,
-        product_description,
-        // signed_escrow_doc,
-        delivery_address,
-        // transaction_status,
-        // payment_status,
-        // profit_made,
-    }, next);
-    try {
-        // Find the user who initiated the transaction
-        // const user = req.user;
-        const user = yield individualUserAuth_model1_1.default.findOne({ email: buyer_email }); //
-        // check if buyer email and vendor email is the same: if it is, we want to tell them that they can't sell to themselves if not we proceed
-        // console.log("user", user);
-        // WE ARE GOING TO USE THIS LOGIC AS A PERSON CANNOT INITIATE ESCROW WITH THEMSELVES
-        // if (!user) {
-        //   return next(errorHandler(404, "User not found"));
-        // } else if (buyer_email === vendor_email) {
-        //   return next(
-        //     errorHandler(404, "You cannot initiate an escrow with yourself")
-        //   );
-        // } else {
-        //   // buyer pays for the escrow
-        //   const transaction_id: string = await uuidv4(); // Generate a random UUID
-        //   // console.log(transaction_id);
-        //   const data = {
-        //     reference: transaction_id,
-        //     amount: transaction_total,
-        //     email: buyer_email,
-        //   };
-        //   // console.log("trans_id_b4_pay", data?.reference);
-        //   const buyerPaysForEscrow = await paymentForEscrowProductTransaction(data);
-        //   // console.log(buyerPaysForEscrow);
-        //   // details are saved in the db
-        //   const newTransaction = new Product({
-        //     user: user,
-        //     transaction_id,
-        //     vendor_name,
-        //     vendor_phone_number,
-        //     buyer_email,
-        //     vendor_email,
-        //     transaction_type,
-        //     product_name,
-        //     // product_category,
-        //     product_quantity,
-        //     product_price,
-        //     transaction_total,
-        //     product_image,
-        //     product_description,
-        //     signed_escrow_doc,
-        //     delivery_address,
-        //     // transaction_status,
-        //     // verified_payment_status: false,
-        //     // profit_made,
-        //     // user: user?.email,
-        //   });
-        //   await newTransaction.save();
-        //   // send response
-        //   res.json({
-        //     buyerPaysForEscrow,
-        //     status: "success",
-        //     message:
-        //       "You have successfully initiated an escrow, please proceed to make payment.",
-        //   });
-        // }
-        if (!user) {
-            return next((0, errorHandling_middleware_1.errorHandler)(404, "User not found"));
-        }
-        else if (buyer_email === vendor_email) {
-            return next((0, errorHandling_middleware_1.errorHandler)(404, "You cannot initiate an escrow with yourself"));
-        }
-        else {
-            // buyer pays for the escrow
-            const transaction_id = yield (0, uuid_1.v4)(); // Generate a random UUID
-            // console.log(transaction_id);
-            const data = {
-                reference: transaction_id,
-                amount: transaction_total,
-                email: buyer_email,
-            };
-            // console.log("trans_id_b4_pay", data?.reference);
-            const buyerPaysForEscrow = yield (0, productsTransaction_paystack_1.paymentForEscrowProductTransaction)(data);
-            // console.log(buyerPaysForEscrow);
-            // details are saved in the db
-            const newTransaction = new productsTransaction_model_1.default({
-                user: user,
-                transaction_id,
-                vendor_name,
-                vendor_phone_number,
-                buyer_email,
-                vendor_email,
-                transaction_type,
-                product_name,
-                // product_category,
-                product_quantity,
-                product_price,
-                transaction_total,
-                product_image,
-                product_description,
-                signed_escrow_doc,
-                delivery_address,
-                // transaction_status,
-                // verified_payment_status: false,
-                // profit_made,
-                // user: user?.email,
-            });
-            yield newTransaction.save();
-            // send response
-            res.json({
-                buyerPaysForEscrow,
-                status: "success",
-                message: "You have successfully initiated an escrow, please proceed to make payment.",
-            });
-        }
-    }
-    catch (error) {
-        console.log(error);
-        // return next(errorHandler(500, "server error"));
-        return next((0, errorHandling_middleware_1.errorHandler)(500, "server error"));
-    }
-});
-exports.initiateEscrowProductTransaction = initiateEscrowProductTransaction;
-const verifyEscrowProductTransactionPayment = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { reference } = req.body;
-        console.log("reference", reference);
-        const transaction = yield productsTransaction_model_1.default.findOne({
-            transaction_id: reference,
-            verified_payment_status: false,
-        });
-        // console.log("transaction_id", transaction?.transaction_id);
-        if (!transaction) {
-            return next((0, errorHandling_middleware_1.errorHandler)(404, "transaction not found or your transaction has been verified"));
-        }
-        else {
-            yield (0, productsTransaction_paystack_1.verifyPaymentForEscrowProductTransaction)(reference);
-            // console.log(verifyTransaction);
-            // console.log(reference);
-            // console.log("trans_1", transaction);
-            // await Product.updateOne({
-            //   transaction_id: reference,
-            //   // transaction_status: true,
-            //   verified_payment_status: true,
-            // });
-            // const newTerr = await Product.findOneAndUpdate(
-            //   { _id: transaction?._id },
-            //   // {
-            //   //   transaction_id: reference,
-            //   // }
-            //   {
-            //     verified_payment_status: true,
-            //   },
-            //   { new: true }
-            // );
-            // if (transaction?.verified_payment_status === false) {
-            //   return next(
-            //     errorHandler(401, "this transaction has not been successful")
-            //   );
-            // } else {
-            // console.log("newTerr", newTerr);
-            // THIS IS WHEN WE SEND THE MESSAGES, NOT DURING INITIATION
-            // pull out the content of the product table for mail delivery
-            const { buyer_email, transaction_id, vendor_name, vendor_email, product_name, product_price, transaction_total, } = transaction;
-            // console.log(transaction);
-            // const findProductDetails = await Product.findOne({
-            //   email: buyer_email,
-            // });
-            // const buyer_email =
-            // Send email to the initiator
-            yield (0, productTransaction_mail_1.sendEscrowInitiationEmailToInitiator)(buyer_email, transaction_id, transaction_total);
-            // await sendEscrowInitiationEmail(user?.email, transaction_id);
-            // Send email to the vendor
-            yield (0, productTransaction_mail_1.sendEscrowInitiationEmailToVendor)(transaction_id, vendor_name, vendor_email, product_name, product_price);
-            // send response
-            res.json({
-                status: "success",
-                message: "Payment has been successfully verified.",
-            });
-            // }
-        }
-    }
-    catch (error) {
-        console.log(error);
-        // return next(errorHandler(500, "server error"));
-        return next((0, errorHandling_middleware_1.errorHandler)(500, "server error"));
-    }
-});
-exports.verifyEscrowProductTransactionPayment = verifyEscrowProductTransactionPayment;
-// export const getSingleEscrowProductTransaction = async (
+// export const initiateEscrowProductTransaction = async (
 //   req: Request,
 //   res: Response,
 //   next: NextFunction
 // ) => {
+//   const {
+//     // transaction_id,
+//     vendor_name,
+//     vendor_phone_number,
+//     buyer_email, // get it from the frontend
+//     vendor_email,
+//     transaction_type,
+//     product_name,
+//     // product_category,
+//     product_quantity,
+//     product_price,
+//     transaction_total,
+//     product_image,
+//     product_description,
+//     signed_escrow_doc,
+//     delivery_address,
+//     // transaction_status,
+//     // payment_status,
+//     // profit_made,
+//   } = req.body;
+//   // Validate required fields
+//   validateProductFields(
+//     {
+//       // transaction_id,
+//       vendor_name,
+//       vendor_phone_number,
+//       // buyer_email,
+//       vendor_email,
+//       transaction_type,
+//       product_name,
+//       // product_category,
+//       product_quantity,
+//       product_price,
+//       transaction_total,
+//       product_image,
+//       product_description,
+//       // signed_escrow_doc,
+//       delivery_address,
+//       // transaction_status,
+//       // payment_status,
+//       // profit_made,
+//     },
+//     next
+//   );
 //   try {
-//     // const user = res.locals.user;
-//     const { transaction_id } = req.params;
-//     // console.log(user);
-//     if (!transaction_id) {
-//       return next(errorHandler(400, "transaction ID is required"));
-//     }
-//     const transaction = await productTransaction.findOne({
-//       transaction_id: transaction_id,
-//       // user_id: user?._id,
-//     });
-//     console.log(transaction);
-//     if (!transaction) {
-//       return next(errorHandler(404, "transaction not found"));
+//     // Find the user who initiated the transaction
+//     // const user = req.user;
+//     const user = await IndividualUser.findOne({ email: buyer_email }); //
+//     // check if buyer email and vendor email is the same: if it is, we want to tell them that they can't sell to themselves if not we proceed
+//     // console.log("user", user);
+//     // WE ARE GOING TO USE THIS LOGIC AS A PERSON CANNOT INITIATE ESCROW WITH THEMSELVES
+//     // if (!user) {
+//     //   return next(errorHandler(404, "User not found"));
+//     // } else if (buyer_email === vendor_email) {
+//     //   return next(
+//     //     errorHandler(404, "You cannot initiate an escrow with yourself")
+//     //   );
+//     // } else {
+//     //   // buyer pays for the escrow
+//     //   const transaction_id: string = await uuidv4(); // Generate a random UUID
+//     //   // console.log(transaction_id);
+//     //   const data = {
+//     //     reference: transaction_id,
+//     //     amount: transaction_total,
+//     //     email: buyer_email,
+//     //   };
+//     //   // console.log("trans_id_b4_pay", data?.reference);
+//     //   const buyerPaysForEscrow = await paymentForEscrowProductTransaction(data);
+//     //   // console.log(buyerPaysForEscrow);
+//     //   // details are saved in the db
+//     //   const newTransaction = new Product({
+//     //     user: user,
+//     //     transaction_id,
+//     //     vendor_name,
+//     //     vendor_phone_number,
+//     //     buyer_email,
+//     //     vendor_email,
+//     //     transaction_type,
+//     //     product_name,
+//     //     // product_category,
+//     //     product_quantity,
+//     //     product_price,
+//     //     transaction_total,
+//     //     product_image,
+//     //     product_description,
+//     //     signed_escrow_doc,
+//     //     delivery_address,
+//     //     // transaction_status,
+//     //     // verified_payment_status: false,
+//     //     // profit_made,
+//     //     // user: user?.email,
+//     //   });
+//     //   await newTransaction.save();
+//     //   // send response
+//     //   res.json({
+//     //     buyerPaysForEscrow,
+//     //     status: "success",
+//     //     message:
+//     //       "You have successfully initiated an escrow, please proceed to make payment.",
+//     //   });
+//     // }
+//     if (!user) {
+//       return next(errorHandler(404, "User not found"));
+//     } else if (buyer_email === vendor_email) {
+//       return next(
+//         errorHandler(404, "You cannot initiate an escrow with yourself")
+//       );
 //     } else {
+//       // buyer pays for the escrow
+//       const transaction_id: string = await uuidv4(); // Generate a random UUID
+//       // console.log(transaction_id);
+//       const data = {
+//         reference: transaction_id,
+//         amount: transaction_total,
+//         email: buyer_email,
+//       };
+//       // console.log("trans_id_b4_pay", data?.reference);
+//       const buyerPaysForEscrow = await paymentForEscrowProductTransaction(data);
+//       // console.log(buyerPaysForEscrow);
+//       // details are saved in the db
+//       const newTransaction = new productTransaction({
+//         user: user,
+//         transaction_id,
+//         vendor_name,
+//         vendor_phone_number,
+//         buyer_email,
+//         vendor_email,
+//         transaction_type,
+//         product_name,
+//         // product_category,
+//         product_quantity,
+//         product_price,
+//         transaction_total,
+//         product_image,
+//         product_description,
+//         signed_escrow_doc,
+//         delivery_address,
+//         // transaction_status,
+//         // verified_payment_status: false,
+//         // profit_made,
+//         // user: user?.email,
+//       });
+//       await newTransaction.save();
+//       // send response
 //       res.json({
-//         transaction,
+//         buyerPaysForEscrow,
 //         status: "success",
-//         message: "transaction fetched successfully",
+//         message:
+//           "You have successfully initiated an escrow, please proceed to make payment.",
 //       });
 //     }
 //   } catch (error: string | unknown) {
@@ -279,71 +184,59 @@ exports.verifyEscrowProductTransactionPayment = verifyEscrowProductTransactionPa
 //     return next(errorHandler(500, "server error"));
 //   }
 // };
-const getAllEscrowProductTransactionByUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const initiateEscrowProductTransaction = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { vendor_name, vendor_phone_number, buyer_email, vendor_email, transaction_type, products, signed_escrow_doc, delivery_address, } = req.body;
+    (0, productsTransaction_validation_1.validateProductFields)({
+        vendor_name,
+        vendor_phone_number,
+        vendor_email,
+        transaction_type,
+        products,
+        delivery_address,
+    }, next);
     try {
-        // const user = res?.locals?.user;
-        // const { buyer_email } = req.params;
-        const { user_email } = req.params;
-        // console.log("buyer_email", buyer_email);
-        console.log("user_email", user_email);
-        // if (!buyer_email) {
-        //   return next(errorHandler(400, "Buyer email is required"));
-        // }
-        if (!user_email) {
-            return next((0, errorHandling_middleware_1.errorHandler)(400, "user email is required"));
+        const user = yield individualUserAuth_model_1.default.findOne({ email: buyer_email });
+        if (!user) {
+            return next((0, errorHandling_middleware_1.errorHandler)(404, "User not found"));
         }
-        // const transaction = await Product.find();
-        // const transactions = await Product.$where({ buyer_email: buyer_email });
-        // db.student.find({
-        //   $where: function () {
-        //     return this.name === "Mickel";
-        //   },
-        // });
-        // USE THE USERS EMAIL ATTACHED TO THE PRODUCT INSTEAD OF BUYER OR SELLER
-        const transactions = yield productsTransaction_model_1.default
-            .find({
-            $or: [
-                { vendor_email: user_email }, // Age greater than 30
-                { buyer_email: user_email }, // OR City is New York
-            ],
-        })
-            .sort({ createdAt: -1 });
-        // Find products where the user (buyer or seller) email matches
-        // const transactions = await Product.find({
-        //   "user.email": user_email, // assuming you have `user` populated in your product schema with `email`
-        // })
-        //   .populate({
-        //     path: "user",
-        //     select: "email", // populating the user field to get email
-        //   })
-        //   .sort({ createdAt: -1 });
-        // const transactions = await Product.find({ buyer_email: buyer_email }).sort({
-        //   createdAt: -1,
-        // });
-        // console.log(transactions);
-        // const { reference } = req.body;
-        // const transaction = await Product.findOne({
-        //   transaction_id: reference,
-        //   verified_payment_status: false,
-        // });
-        if (!transactions || transactions.length === 0) {
-            return next((0, errorHandling_middleware_1.errorHandler)(404, "you don't have any transactions at this time"));
+        if (buyer_email === vendor_email) {
+            return next((0, errorHandling_middleware_1.errorHandler)(404, "You cannot initiate an escrow with yourself"));
         }
-        else {
-            res.json({
-                transactions,
-                status: "success",
-                message: "all transactions fetched successfully",
-            });
-        }
+        const transaction_id = (0, uuid_1.v4)();
+        const sum_total = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
+        const commission = sum_total * 0.01; // 1% commission
+        const transaction_total = sum_total + commission; // Sum total plus 1% commission
+        const newTransaction = new productsTransaction_model_1.default({
+            user,
+            transaction_id,
+            vendor_name,
+            vendor_phone_number,
+            buyer_email,
+            vendor_email,
+            transaction_type,
+            products,
+            sum_total,
+            transaction_total,
+            signed_escrow_doc,
+            delivery_address,
+            buyer_initiated: true,
+        });
+        yield newTransaction.save();
+        yield (0, productTransaction_mail_1.sendEscrowInitiationEmailToVendor)(transaction_id, vendor_name, vendor_email, products, sum_total, transaction_total);
+        res.json({
+            status: "success",
+            message: "Transaction initiated, awaiting seller confirmation.",
+            transaction_id,
+            sum_total,
+            transaction_total,
+            commission, // Optionally include commission for transparency
+        });
     }
     catch (error) {
-        console.log(error);
-        // return next(errorHandler(500, "server error"));
         return next((0, errorHandling_middleware_1.errorHandler)(500, "server error"));
     }
 });
-exports.getAllEscrowProductTransactionByUser = getAllEscrowProductTransactionByUser;
+exports.initiateEscrowProductTransaction = initiateEscrowProductTransaction;
 // export const sellerConfirmsAnEscrowProductTransaction = async (
 //   req: Request,
 //   res: Response,
@@ -450,139 +343,454 @@ exports.getAllEscrowProductTransactionByUser = getAllEscrowProductTransactionByU
 //     res.status(500).json({ message: "Error Logging in user", error });
 //   }
 // };
-const sellerFillOutShippingDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    // when they accept/confirm, a message/popup to tell the seller the next steps.
-    // mail is sent to the buyer that the seller has agreed and will be sending the goods
-    // the mail contains a link to the page where the buyer can click on so that they are redirected to where they can confirm that they like the product and close the escrow.
-    // when vendor clicks on agree, they are redirected to a form to fill in the shipping details -> a summary is given and is contained in the mail sent to the buyer
-    // when vendor agrees, the buyer and seller get a mail
-    const { shipping_company, delivery_person_name, delivery_person_number, delivery_person_email, delivery_date, pick_up_address, transaction_id, } = req.body;
+const sellerConfirmsAnEscrowProductTransaction = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { transaction_id, confirmation, vendor_email } = req.body;
+    // Validate required fields
+    if (!transaction_id || typeof confirmation !== "boolean" || !vendor_email) {
+        return next((0, errorHandling_middleware_1.errorHandler)(400, "Transaction ID, confirmation, and vendor email are required"));
+    }
     try {
-        (0, productsTransaction_validation_1.validateProductFields)({
+        const transaction = yield productsTransaction_model_1.default.findOne({ transaction_id });
+        if (!transaction) {
+            return next((0, errorHandling_middleware_1.errorHandler)(404, "Transaction not found"));
+        }
+        // Check if the transaction is in a valid state for confirmation
+        if (!transaction.buyer_initiated || transaction.seller_confirmed) {
+            return next((0, errorHandling_middleware_1.errorHandler)(400, "Invalid transaction state for confirmation"));
+        }
+        // Verify the vendor email matches the transaction's vendor_email
+        if (transaction.vendor_email !== vendor_email) {
+            return next((0, errorHandling_middleware_1.errorHandler)(403, "Unauthorized: Incorrect vendor email"));
+        }
+        if (confirmation) {
+            const updatedTransaction = yield productsTransaction_model_1.default.findByIdAndUpdate(transaction._id, {
+                seller_confirmed: true,
+                transaction_status: "awaiting_payment",
+            }, { new: true });
+            if (!updatedTransaction) {
+                return next((0, errorHandling_middleware_1.errorHandler)(500, "Failed to update transaction"));
+            }
+            // Updated call with all required parameters and 'accepted' status
+            yield (0, productTransaction_mail_1.sendEscrowInitiationEmailToInitiator)(transaction.buyer_email, transaction.transaction_id, transaction.transaction_total, transaction.vendor_name, transaction.products, transaction.sum_total, "accepted");
+            res.json({
+                status: "success",
+                message: "Seller confirmed, buyer notified to proceed with payment.",
+                transaction_id: updatedTransaction.transaction_id,
+            });
+        }
+        else {
+            const updatedTransaction = yield productsTransaction_model_1.default.findByIdAndUpdate(transaction._id, {
+                seller_confirmed: false,
+                transaction_status: "declined",
+            }, { new: true });
+            if (!updatedTransaction) {
+                return next((0, errorHandling_middleware_1.errorHandler)(500, "Failed to update transaction"));
+            }
+            // Updated call with all required parameters and 'rejected' status
+            yield (0, productTransaction_mail_1.sendEscrowInitiationEmailToInitiator)(transaction.buyer_email, transaction.transaction_id, transaction.transaction_total, transaction.vendor_name, transaction.products, transaction.sum_total, "rejected");
+            res.json({
+                status: "success",
+                message: "Seller declined the transaction.",
+                transaction_id: updatedTransaction.transaction_id,
+            });
+        }
+    }
+    catch (error) {
+        return next((0, errorHandling_middleware_1.errorHandler)(500, "Server error"));
+    }
+});
+exports.sellerConfirmsAnEscrowProductTransaction = sellerConfirmsAnEscrowProductTransaction;
+//  export const verifyEscrowProductTransactionPayment = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const { reference } = req.body;
+//     console.log("reference", reference);
+//     const transaction = await productTransaction.findOne({
+//       transaction_id: reference,
+//       verified_payment_status: false,
+//     });
+//     // console.log("transaction_id", transaction?.transaction_id);
+//     if (!transaction) {
+//       return next(
+//         errorHandler(
+//           404,
+//           "transaction not found or your transaction has been verified"
+//         )
+//       );
+//     } else {
+//       await verifyPaymentForEscrowProductTransaction(reference);
+//       // console.log(verifyTransaction);
+//       // console.log(reference);
+//       // console.log("trans_1", transaction);
+//       // await Product.updateOne({
+//       //   transaction_id: reference,
+//       //   // transaction_status: true,
+//       //   verified_payment_status: true,
+//       // });
+//       // const newTerr = await Product.findOneAndUpdate(
+//       //   { _id: transaction?._id },
+//       //   // {
+//       //   //   transaction_id: reference,
+//       //   // }
+//       //   {
+//       //     verified_payment_status: true,
+//       //   },
+//       //   { new: true }
+//       // );
+//       // if (transaction?.verified_payment_status === false) {
+//       //   return next(
+//       //     errorHandler(401, "this transaction has not been successful")
+//       //   );
+//       // } else {
+//       // console.log("newTerr", newTerr);
+//       // THIS IS WHEN WE SEND THE MESSAGES, NOT DURING INITIATION
+//       // pull out the content of the product table for mail delivery
+//       const {
+//         buyer_email,
+//         transaction_id,
+//         vendor_name,
+//         vendor_email,
+//         product_name,
+//         product_price,
+//         transaction_total,
+//       } = transaction;
+//       // console.log(transaction);
+//       // const findProductDetails = await Product.findOne({
+//       //   email: buyer_email,
+//       // });
+//       // const buyer_email =
+//       // Send email to the initiator
+//       await sendEscrowInitiationEmailToInitiator(
+//         buyer_email,
+//         transaction_id,
+//         transaction_total
+//       );
+//       // await sendEscrowInitiationEmail(user?.email, transaction_id);
+//       // Send email to the vendor
+//       await sendEscrowInitiationEmailToVendor(
+//         transaction_id,
+//         vendor_name,
+//         vendor_email,
+//         product_name,
+//         product_price
+//       );
+//       // send response
+//       res.json({
+//         status: "success",
+//         message: "Payment has been successfully verified.",
+//       });
+//       // }
+//     }
+//   } catch (error: string | unknown) {
+//     console.log(error);
+//     // return next(errorHandler(500, "server error"));
+//     return next(errorHandler(500, "server error"));
+//   }
+// };
+const verifyEscrowProductTransactionPayment = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { transaction_id, buyer_email, reference } = req.body;
+    if (!transaction_id || !buyer_email) {
+        return next((0, errorHandling_middleware_1.errorHandler)(400, "Transaction ID and buyer email are required"));
+    }
+    try {
+        const transaction = yield productsTransaction_model_1.default.findOne({ transaction_id });
+        if (!transaction)
+            return next((0, errorHandling_middleware_1.errorHandler)(404, "Transaction not found"));
+        if (!transaction.buyer_initiated ||
+            !transaction.seller_confirmed ||
+            transaction.verified_payment_status) {
+            return next((0, errorHandling_middleware_1.errorHandler)(400, "Invalid transaction state for payment verification"));
+        }
+        if (transaction.buyer_email !== buyer_email) {
+            return next((0, errorHandling_middleware_1.errorHandler)(403, "Unauthorized: Incorrect buyer email"));
+        }
+        // STEP 1: INITIATE PAYMENT
+        if (!reference) {
+            const paystackResponse = yield (0, productsTransaction_paystack_1.paymentForEscrowProductTransaction)({
+                reference: transaction.transaction_id,
+                amount: Number(transaction.transaction_total),
+                email: buyer_email,
+            });
+            if (paystackResponse.status && paystackResponse.data.authorization_url) {
+                return res.json({
+                    status: "success",
+                    message: "Payment initiation successful. Please complete the payment on Paystack.",
+                    authorization_url: paystackResponse.data.authorization_url,
+                    transaction_id: transaction.transaction_id,
+                });
+            }
+            return next((0, errorHandling_middleware_1.errorHandler)(500, "Failed to initiate Paystack payment"));
+        }
+        // STEP 2: VERIFY PAYMENT
+        const verificationResponse = yield (0, productsTransaction_paystack_1.verifyPaymentForEscrowProductTransaction)(reference);
+        if (verificationResponse.status &&
+            verificationResponse.data.status === "success" &&
+            verificationResponse.data.amount / 100 ===
+                Number(transaction.transaction_total)) {
+            const updatedTransaction = yield productsTransaction_model_1.default.findByIdAndUpdate(transaction._id, {
+                verified_payment_status: true,
+                transaction_status: "awaiting_shipping",
+            }, { new: true });
+            if (!updatedTransaction)
+                return next((0, errorHandling_middleware_1.errorHandler)(500, "Failed to update transaction"));
+            try {
+                yield (0, productTransaction_mail_1.sendEscrowInitiationEmailToVendor)(transaction.transaction_id, transaction.vendor_name, transaction.vendor_email, transaction.products, transaction.sum_total, transaction.transaction_total);
+            }
+            catch (err) {
+                console.error("Failed to send vendor email:", err);
+            }
+            return res.json({
+                status: "success",
+                message: "Payment has been successfully verified.",
+                sum_total: transaction.sum_total,
+                transaction_total: transaction.transaction_total,
+                transaction_id: updatedTransaction.transaction_id,
+            });
+        }
+        return next((0, errorHandling_middleware_1.errorHandler)(400, "Payment verification failed"));
+    }
+    catch (error) {
+        console.error("verifyEscrowProductTransactionPayment error:", error);
+        return next((0, errorHandling_middleware_1.errorHandler)(500, "Server error"));
+    }
+});
+exports.verifyEscrowProductTransactionPayment = verifyEscrowProductTransactionPayment;
+//  export const sellerFillOutShippingDetails = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   // when they accept/confirm, a message/popup to tell the seller the next steps.
+//   // mail is sent to the buyer that the seller has agreed and will be sending the goods
+//   // the mail contains a link to the page where the buyer can click on so that they are redirected to where they can confirm that they like the product and close the escrow.
+//   // when vendor clicks on agree, they are redirected to a form to fill in the shipping details -> a summary is given and is contained in the mail sent to the buyer
+//   // when vendor agrees, the buyer and seller get a mail
+//   const {
+//     shipping_company,
+//     delivery_person_name,
+//     delivery_person_number,
+//     delivery_person_email,
+//     delivery_date,
+//     pick_up_address,
+//     transaction_id,
+//   } = req.body;
+//   try {
+//     validateProductFields(
+//       {
+//         shipping_company,
+//         delivery_person_name,
+//         delivery_person_number,
+//         delivery_person_email,
+//         delivery_date,
+//         pick_up_address,
+//       },
+//       next
+//     );
+//     const getTransaction = await productTransaction.findOne({
+//       transaction_id: transaction_id,
+//       seller_confirm_status: false,
+//     });
+//     const transactionId = getTransaction?.transaction_id;
+//     const sellerConfirmStatus = getTransaction?.seller_confirm_status;
+//     const buyer_email = getTransaction?.buyer_email;
+//     const vendor_name = getTransaction?.vendor_name;
+//     const vendor_email = getTransaction?.vendor_email;
+//     const product_name = getTransaction?.product_name;
+//     console.log("Buyer Email 1:", buyer_email);
+//     console.log("Vendor Email 1:", vendor_email);
+//     // if (!transactionId || !vendorName || !vendorEmail || !productName) {
+//     //   console.log("Error: Missing required fields to send the email");
+//     //   return; // Exit the function early or handle the error
+//     // }
+//     const user = await IndividualUser.findOne({
+//       email: vendor_email,
+//     });
+//     if (transactionId !== transaction_id && sellerConfirmStatus !== false) {
+//       return next(
+//         errorHandler(404, "This Transaction has been previously confirmed.")
+//       );
+//     } else {
+//       const newShippingDetails = new ShippingDetails({
+//         user: user,
+//         product: getTransaction,
+//         transaction_id: transactionId,
+//         shipping_company,
+//         delivery_person_name,
+//         delivery_person_number,
+//         delivery_person_email,
+//         delivery_date,
+//         pick_up_address,
+//         buyer_email,
+//         vendor_email,
+//       });
+//       console.log("Buyer Email 2:", buyer_email);
+//       console.log("Vendor Email 2:", vendor_email);
+//       await newShippingDetails.save();
+//       // THE seller_confirm_status WILL BE UPDATED TO TRUE AFTER IT HAS BEEN SAVED SO THAT USERS CANNOT RECONFIRM IT
+//       const updatedConfirmationStatus =
+//         await productTransaction.findOneAndUpdate(
+//           { _id: getTransaction?._id },
+//           {
+//             seller_confirm_status: true,
+//           },
+//           { new: true }
+//         );
+//       console.log("updatedConfirmationStatus", updatedConfirmationStatus);
+//       // WE CANNOT SEND SHIPPING DETAILS TWICE
+//       // send mail to initiator with shipping details
+//       await sendShippingDetailsEmailToInitiator(
+//         buyer_email,
+//         shipping_company,
+//         delivery_person_name,
+//         delivery_person_number,
+//         delivery_date,
+//         pick_up_address
+//       );
+//       // send mail to seller about waiting for delivery to get to buyer
+//       await sendShippingDetailsEmailToVendor(
+//         transactionId,
+//         vendor_name,
+//         vendor_email,
+//         product_name
+//       );
+//       console.log("Buyer Email Last:", buyer_email);
+//       console.log("Vendor Email Last:", vendor_email);
+//       res.json({
+//         newShippingDetails,
+//         status: "success",
+//         message: "you have successfully started an order",
+//       });
+//     }
+//     // check if the transaction id exist
+//     // extract the transaction_id and pass it in to save
+//     // send mail to both users
+//   } catch (error) {
+//     res.status(500).json({ message: "Error Logging in user", error });
+//   }
+// };
+const sellerFillOutShippingDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { shipping_company, delivery_person_name, delivery_person_number, delivery_person_email, delivery_date, pick_up_address, transaction_id, } = req.body;
+    // Validate input fields
+    (0, productsTransaction_validation_1.validateProductFields)({
+        shipping_company,
+        delivery_person_name,
+        delivery_person_number,
+        delivery_person_email,
+        delivery_date,
+        pick_up_address,
+    }, next);
+    try {
+        // Ensure transaction exists and is in correct state
+        const transaction = yield productsTransaction_model_1.default.findOne({
+            transaction_id,
+            verified_payment_status: true,
+            shipping_submitted: false,
+        });
+        if (!transaction) {
+            return next((0, errorHandling_middleware_1.errorHandler)(404, "Invalid transaction state for shipping"));
+        }
+        // Get vendor user info
+        const user = yield individualUserAuth_model_1.default.findOne({
+            email: transaction.vendor_email,
+        });
+        if (!user) {
+            return next((0, errorHandling_middleware_1.errorHandler)(404, "Vendor not found"));
+        }
+        //Create shipping record
+        const newShippingDetails = new shippingDetails_model_1.default({
+            user,
+            product: transaction,
+            transaction_id,
             shipping_company,
             delivery_person_name,
             delivery_person_number,
             delivery_person_email,
             delivery_date,
             pick_up_address,
-        }, next);
-        const getTransaction = yield productsTransaction_model_1.default.findOne({
-            transaction_id: transaction_id,
-            seller_confirm_status: false,
+            buyer_email: transaction.buyer_email,
+            vendor_email: transaction.vendor_email,
         });
-        const transactionId = getTransaction === null || getTransaction === void 0 ? void 0 : getTransaction.transaction_id;
-        const sellerConfirmStatus = getTransaction === null || getTransaction === void 0 ? void 0 : getTransaction.seller_confirm_status;
-        const buyer_email = getTransaction === null || getTransaction === void 0 ? void 0 : getTransaction.buyer_email;
-        const vendor_name = getTransaction === null || getTransaction === void 0 ? void 0 : getTransaction.vendor_name;
-        const vendor_email = getTransaction === null || getTransaction === void 0 ? void 0 : getTransaction.vendor_email;
-        const product_name = getTransaction === null || getTransaction === void 0 ? void 0 : getTransaction.product_name;
-        console.log("Buyer Email 1:", buyer_email);
-        console.log("Vendor Email 1:", vendor_email);
-        // if (!transactionId || !vendorName || !vendorEmail || !productName) {
-        //   console.log("Error: Missing required fields to send the email");
-        //   return; // Exit the function early or handle the error
-        // }
-        const user = yield individualUserAuth_model1_1.default.findOne({
-            email: vendor_email,
+        yield newShippingDetails.save();
+        // Mark transaction as having shipping info submitted
+        transaction.shipping_submitted = true;
+        yield transaction.save();
+        yield (0, productTransaction_mail_1.sendShippingDetailsEmailToInitiator)(transaction.buyer_email, shipping_company, delivery_person_name, delivery_person_number, delivery_date, pick_up_address);
+        yield (0, productTransaction_mail_1.sendShippingDetailsEmailToVendor)(transaction.transaction_id, transaction.vendor_name, transaction.vendor_email, transaction.products.map((p) => p.name).join(", "));
+        res.status(200).json({
+            status: "success",
+            message: "Shipping details submitted successfully",
+            newShippingDetails,
         });
-        if (transactionId !== transaction_id && sellerConfirmStatus !== false) {
-            return next((0, errorHandling_middleware_1.errorHandler)(404, "This Transaction has been previously confirmed."));
-        }
-        else {
-            const newShippingDetails = new shippingDetails_model_1.default({
-                user: user,
-                product: getTransaction,
-                transaction_id: transactionId,
-                shipping_company,
-                delivery_person_name,
-                delivery_person_number,
-                delivery_person_email,
-                delivery_date,
-                pick_up_address,
-                buyer_email,
-                vendor_email,
-            });
-            console.log("Buyer Email 2:", buyer_email);
-            console.log("Vendor Email 2:", vendor_email);
-            yield newShippingDetails.save();
-            // THE seller_confirm_status WILL BE UPDATED TO TRUE AFTER IT HAS BEEN SAVED SO THAT USERS CANNOT RECONFIRM IT
-            const updatedConfirmationStatus = yield productsTransaction_model_1.default.findOneAndUpdate({ _id: getTransaction === null || getTransaction === void 0 ? void 0 : getTransaction._id }, {
-                seller_confirm_status: true,
-            }, { new: true });
-            console.log("updatedConfirmationStatus", updatedConfirmationStatus);
-            // WE CANNOT SEND SHIPPING DETAILS TWICE
-            // send mail to initiator with shipping details
-            yield (0, productTransaction_mail_1.sendShippingDetailsEmailToInitiator)(buyer_email, shipping_company, delivery_person_name, delivery_person_number, delivery_date, pick_up_address);
-            // send mail to seller about waiting for delivery to get to buyer
-            yield (0, productTransaction_mail_1.sendShippingDetailsEmailToVendor)(transactionId, vendor_name, vendor_email, product_name);
-            console.log("Buyer Email Last:", buyer_email);
-            console.log("Vendor Email Last:", vendor_email);
-            res.json({
-                newShippingDetails,
-                status: "success",
-                message: "you have successfully started an order",
-            });
-        }
-        // check if the transaction id exist
-        // extract the transaction_id and pass it in to save
-        // send mail to both users
     }
     catch (error) {
-        res.status(500).json({ message: "Error Logging in user", error });
+        console.error("Error in sellerFillOutShippingDetails:", error);
+        return next((0, errorHandling_middleware_1.errorHandler)(500, "Server error"));
     }
 });
 exports.sellerFillOutShippingDetails = sellerFillOutShippingDetails;
-// export const getAllShippingDetailsForBuyer = async (
+// export const getAllEscrowProductTransactionByUser = async (
 //   req: Request,
 //   res: Response,
 //   next: NextFunction
 // ) => {
 //   try {
 //     // const user = res?.locals?.user;
-//     // const { buyer_email, vendor_email } = req.params;
-//     const { buyer_email } = req.params;
-//     console.log("Buyer Email:", buyer_email);
-//     // console.log("Vendor Email:", vendor_email);
-//     // if (!buyer_email || !vendor_email) {
-//     //   return next(errorHandler(400, "Buyer email or vendor email is required"));
+//     // const { buyer_email } = req.params;
+//     const { user_email } = req.params;
+//     // console.log("buyer_email", buyer_email);
+//     console.log("user_email", user_email);
+//     // if (!buyer_email) {
+//     //   return next(errorHandler(400, "Buyer email is required"));
 //     // }
-//     if (!buyer_email) {
-//       return next(errorHandler(400, "Buyer email is required"));
+//     if (!user_email) {
+//       return next(errorHandler(400, "user email is required"));
 //     }
-//     // Create filter conditions for the query based on provided emails
-//     const matchByMails: noSQLJoinType = {};
-//     if (buyer_email) {
-//       // matchByMails["product.buyer_email"] = buyer_email as string;
-//       matchByMails["product.buyer_email"] = buyer_email;
-//     }
-//     // if (vendor_email) {
-//     //   // matchByMails["product.vendor_email"] = buyer_email as string;
-//     //   matchByMails["product.vendor_email"] = buyer_email;
-//     // }
-//     // Use aggregate to join ShippingDetails with Product collection
-//     const transactions = await ShippingDetails.aggregate([
-//       {
-//         $lookup: {
-//           from: "products", // name of the 'Product' collection
-//           localField: "product", // field in ShippingDetails that references Product
-//           foreignField: "_id", // field in Product collection
-//           as: "product",
-//         },
-//       },
-//       { $unwind: "$product" }, // Unwind to access product details directly,
-//       { $match: matchByMails }, // Filter based on buyer or vendor email,
-//       { $sort: { createdAt: -1 } }, // Sort by creation date
-//     ]);
+//     // const transaction = await Product.find();
+//     // const transactions = await Product.$where({ buyer_email: buyer_email });
+//     // db.student.find({
+//     //   $where: function () {
+//     //     return this.name === "Mickel";
+//     //   },
+//     // });
+//     // USE THE USERS EMAIL ATTACHED TO THE PRODUCT INSTEAD OF BUYER OR SELLER
+//     const transactions = await productTransaction
+//       .find({
+//         $or: [
+//           { vendor_email: user_email }, // Age greater than 30
+//           { buyer_email: user_email }, // OR City is New York
+//         ],
+//       })
+//       .sort({ createdAt: -1 });
+//     // Find products where the user (buyer or seller) email matches
+//     // const transactions = await Product.find({
+//     //   "user.email": user_email, // assuming you have `user` populated in your product schema with `email`
+//     // })
+//     //   .populate({
+//     //     path: "user",
+//     //     select: "email", // populating the user field to get email
+//     //   })
+//     //   .sort({ createdAt: -1 });
+//     // const transactions = await Product.find({ buyer_email: buyer_email }).sort({
+//     //   createdAt: -1,
+//     // });
 //     // console.log(transactions);
+//     // const { reference } = req.body;
+//     // const transaction = await Product.findOne({
+//     //   transaction_id: reference,
+//     //   verified_payment_status: false,
+//     // });
 //     if (!transactions || transactions.length === 0) {
 //       return next(
-//         errorHandler(404, "you don't have any shipping history at this time")
+//         errorHandler(404, "you don't have any transactions at this time")
 //       );
 //     } else {
 //       res.json({
 //         transactions,
 //         status: "success",
-//         message: "all shipping details fetched successfully",
+//         message: "all transactions fetched successfully",
 //       });
 //     }
 //   } catch (error: string | unknown) {
@@ -591,65 +799,51 @@ exports.sellerFillOutShippingDetails = sellerFillOutShippingDetails;
 //     return next(errorHandler(500, "server error"));
 //   }
 // };
-// export const getAllShippingDetailsForVendor = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   try {
-//     // const user = res?.locals?.user;
-//     // const { buyer_email, vendor_email } = req.params;
-//     const { vendor_email } = req.params;
-//     console.log("Vendor Email:", vendor_email);
-//     // console.log("Vendor Email:", vendor_email);
-//     // if (!buyer_email || !vendor_email) {
-//     //   return next(errorHandler(400, "Buyer email or vendor email is required"));
-//     // }
-//     if (!vendor_email) {
-//       return next(errorHandler(400, "Vendor email is required"));
-//     }
-//     // Create filter conditions for the query based on provided emails
-//     const matchByMails: noSQLJoinType = {};
-//     if (vendor_email) {
-//       // matchByMails["product.buyer_email"] = buyer_email as string;
-//       matchByMails["product.vendor_email"] = vendor_email;
-//     }
-//     // if (vendor_email) {
-//     //   // matchByMails["product.vendor_email"] = buyer_email as string;
-//     //   matchByMails["product.vendor_email"] = buyer_email;
-//     // }
-//     // Use aggregate to join ShippingDetails with Product collection
-//     const transactions = await ShippingDetails.aggregate([
-//       {
-//         $lookup: {
-//           from: "products", // name of the 'Product' collection
-//           localField: "product", // field in ShippingDetails that references Product
-//           foreignField: "_id", // field in Product collection
-//           as: "product",
-//         },
-//       },
-//       { $unwind: "$product" }, // Unwind to access product details directly,
-//       { $match: matchByMails }, // Filter based on buyer or vendor email,
-//       { $sort: { createdAt: -1 } }, // Sort by creation date
-//     ]);
-//     // console.log(transactions);
-//     if (!transactions || transactions.length === 0) {
-//       return next(
-//         errorHandler(404, "you don't have any shipping history at this time")
-//       );
-//     } else {
-//       res.json({
-//         transactions,
-//         status: "success",
-//         message: "all shipping details fetched successfully",
-//       });
-//     }
-//   } catch (error: string | unknown) {
-//     console.log(error);
-//     // return next(errorHandler(500, "server error"));
-//     return next(errorHandler(500, "server error"));
-//   }
-// };
+const getAllEscrowProductTransactionByUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { user_email } = req.params;
+        if (!user_email) {
+            return next((0, errorHandling_middleware_1.errorHandler)(400, "user email is required"));
+        }
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1; // Default to page 1
+        const limit = parseInt(req.query.limit) || 10; // Default to 10 items per page
+        const skip = (page - 1) * limit;
+        // Fetch total count for pagination metadata
+        const total = yield productsTransaction_model_1.default.countDocuments({
+            $or: [{ vendor_email: user_email }, { buyer_email: user_email }],
+        });
+        // Fetch paginated transactions
+        const transactions = yield productsTransaction_model_1.default.find({
+            $or: [{ vendor_email: user_email }, { buyer_email: user_email }],
+        })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+        if (!transactions || transactions.length === 0) {
+            return next((0, errorHandling_middleware_1.errorHandler)(404, "you don't have any transactions at this time"));
+        }
+        // Calculate total pages
+        const totalPages = Math.ceil(total / limit);
+        res.json({
+            transactions,
+            status: "success",
+            message: "all transactions fetched successfully",
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1,
+            },
+        });
+    }
+    catch (error) {
+        return next((0, errorHandling_middleware_1.errorHandler)(500, "server error"));
+    }
+});
+exports.getAllEscrowProductTransactionByUser = getAllEscrowProductTransactionByUser;
 // export const getAllShippingDetails = async (
 //   req: Request,
 //   res: Response,
@@ -657,25 +851,62 @@ exports.sellerFillOutShippingDetails = sellerFillOutShippingDetails;
 // ) => {
 //   try {
 //     // const user = res?.locals?.user;
-//     const { buyer_email, vendor_email } = req.params;
-//     console.log("Buyer Email:", buyer_email);
-//     console.log("Vendor Email:", vendor_email);
+//     // const { buyer_email, vendor_email } = req.params;
+//     const { user_email } = req.params;
+//     console.log("user Email:", user_email);
+//     // console.log("Vendor Email:", vendor_email);
 //     // console.log("user", user);
-//     if (!buyer_email || !vendor_email) {
-//       return next(errorHandler(400, "Buyer email or vendor email is required"));
+//     // if (!buyer_email || !vendor_email) {
+//     //   return next(errorHandler(400, "Buyer email or vendor email is required"));
+//     // }
+//     if (!user_email) {
+//       return next(errorHandler(400, "User email is required"));
 //     }
 //     // Create filter conditions for the query based on provided emails
-//     const matchByMails: noSQLJoinType = {};
-//     if (buyer_email) {
-//       // matchByMails["product.buyer_email"] = buyer_email as string;
-//       matchByMails["product.buyer_email"] = buyer_email;
-//     }
-//     if (vendor_email) {
-//       // matchByMails["product.vendor_email"] = buyer_email as string;
-//       matchByMails["product.vendor_email"] = buyer_email;
-//     }
+//     // const matchByMails: noSQLJoinType = {};
+//     // if (buyer_email || vendor_email) {
+//     //   // matchByMails["product.buyer_email"] = buyer_email as string;
+//     //   // matchByMails["product.buyer_email"] = buyer_email;
+//     //   // matchByMails["$or"] = [];
+//     //   const matchByMails: { $or?: { [key: string]: string }[] } = {};
+//     //   matchByMails.$or = matchByMails.$or || [];
+//     //   if (buyer_email) {
+//     //     matchByMails["$or"].push({ "product.buyer_email": buyer_email });
+//     //   }
+//     //   if (vendor_email) {
+//     //     matchByMails["$or"].push({ "product.vendor_email": vendor_email });
+//     //   }
+//     // }
+//     // if (user_email) {
+//     //   // matchByMails["product.buyer_email"] = buyer_email as string;
+//     //   // matchByMails["product.buyer_email"] = buyer_email;
+//     //   // matchByMails["$or"] = [];
+//     //   const matchByMails: { $or?: { [key: string]: string }[] } = {};
+//     //   matchByMails.$or = matchByMails.$or || [];
+//     //   if (user_email) {
+//     //     matchByMails["$or"].push({ "product.buyer_email": user_email });
+//     //   }
+//     // }
+//     // if (vendor_email) {
+//     //   // matchByMails["product.vendor_email"] = buyer_email as string;
+//     //   matchByMails["product.vendor_email"] = buyer_email;
+//     // }
 //     // Use aggregate to join ShippingDetails with Product collection
+//     // const transactions = await Product.find({
+//     //   $or: [
+//     //     { vendor_email: user_email }, // Age greater than 30
+//     //     { buyer_email: user_email }, // OR City is New York
+//     //   ],
+//     // }).sort({ createdAt: -1 });
 //     const transactions = await ShippingDetails.aggregate([
+//       {
+//         $match: {
+//           $or: [
+//             { vendor_email: user_email }, // Age greater than 30
+//             { buyer_email: user_email }, // OR City is New York
+//           ],
+//         },
+//       }, // Filter based on buyer or vendor email,
 //       {
 //         $lookup: {
 //           from: "products", // name of the 'Product' collection
@@ -685,13 +916,14 @@ exports.sellerFillOutShippingDetails = sellerFillOutShippingDetails;
 //         },
 //       },
 //       { $unwind: "$product" }, // Unwind to access product details directly,
-//       { $match: matchByMails }, // Filter based on buyer or vendor email,
 //       { $sort: { createdAt: -1 } }, // Sort by creation date
 //     ]);
 //     if (!transactions || transactions.length === 0) {
-//       return next(
-//         errorHandler(404, "you don't have any shipping history at this time")
-//       );
+//       res.json({
+//         transactions: [],
+//         status: "success",
+//         message: "you do not have any shipping detail at this time",
+//       });
 //     } else {
 //       res.json({
 //         transactions,
@@ -707,471 +939,223 @@ exports.sellerFillOutShippingDetails = sellerFillOutShippingDetails;
 // };
 const getAllShippingDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // const user = res?.locals?.user;
-        // const { buyer_email, vendor_email } = req.params;
         const { user_email } = req.params;
-        console.log("user Email:", user_email);
-        // console.log("Vendor Email:", vendor_email);
-        // console.log("user", user);
-        // if (!buyer_email || !vendor_email) {
-        //   return next(errorHandler(400, "Buyer email or vendor email is required"));
-        // }
         if (!user_email) {
             return next((0, errorHandling_middleware_1.errorHandler)(400, "User email is required"));
         }
-        // Create filter conditions for the query based on provided emails
-        // const matchByMails: noSQLJoinType = {};
-        // if (buyer_email || vendor_email) {
-        //   // matchByMails["product.buyer_email"] = buyer_email as string;
-        //   // matchByMails["product.buyer_email"] = buyer_email;
-        //   // matchByMails["$or"] = [];
-        //   const matchByMails: { $or?: { [key: string]: string }[] } = {};
-        //   matchByMails.$or = matchByMails.$or || [];
-        //   if (buyer_email) {
-        //     matchByMails["$or"].push({ "product.buyer_email": buyer_email });
-        //   }
-        //   if (vendor_email) {
-        //     matchByMails["$or"].push({ "product.vendor_email": vendor_email });
-        //   }
-        // }
-        // if (user_email) {
-        //   // matchByMails["product.buyer_email"] = buyer_email as string;
-        //   // matchByMails["product.buyer_email"] = buyer_email;
-        //   // matchByMails["$or"] = [];
-        //   const matchByMails: { $or?: { [key: string]: string }[] } = {};
-        //   matchByMails.$or = matchByMails.$or || [];
-        //   if (user_email) {
-        //     matchByMails["$or"].push({ "product.buyer_email": user_email });
-        //   }
-        // }
-        // if (vendor_email) {
-        //   // matchByMails["product.vendor_email"] = buyer_email as string;
-        //   matchByMails["product.vendor_email"] = buyer_email;
-        // }
-        // Use aggregate to join ShippingDetails with Product collection
-        // const transactions = await Product.find({
-        //   $or: [
-        //     { vendor_email: user_email }, // Age greater than 30
-        //     { buyer_email: user_email }, // OR City is New York
-        //   ],
-        // }).sort({ createdAt: -1 });
-        const transactions = yield shippingDetails_model_1.default.aggregate([
-            {
-                $match: {
-                    $or: [
-                        { vendor_email: user_email }, // Age greater than 30
-                        { buyer_email: user_email }, // OR City is New York
-                    ],
-                },
-            }, // Filter based on buyer or vendor email,
-            {
-                $lookup: {
-                    from: "products", // name of the 'Product' collection
-                    localField: "product", // field in ShippingDetails that references Product
-                    foreignField: "_id", // field in Product collection
-                    as: "product",
-                },
-            },
-            { $unwind: "$product" }, // Unwind to access product details directly,
-            { $sort: { createdAt: -1 } }, // Sort by creation date
-        ]);
+        // Pagination and search parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const search = req.query.search || "";
+        // Fetch total count for pagination metadata
+        const total = yield shippingDetails_model_1.default.countDocuments(Object.assign({ $or: [{ vendor_email: user_email }, { buyer_email: user_email }] }, (search && {
+            $or: [
+                { shipping_company: { $regex: search, $options: "i" } },
+                { delivery_person_name: { $regex: search, $options: "i" } },
+                { buyer_email: { $regex: search, $options: "i" } },
+            ],
+        })));
+        // Fetch paginated and filtered transactions
+        const transactions = yield shippingDetails_model_1.default.find(Object.assign({ $or: [{ vendor_email: user_email }, { buyer_email: user_email }] }, (search && {
+            $or: [
+                { shipping_company: { $regex: search, $options: "i" } },
+                { delivery_person_name: { $regex: search, $options: "i" } },
+                { buyer_email: { $regex: search, $options: "i" } },
+            ],
+        })))
+            .populate({
+            path: "product",
+            model: "ProductTransaction",
+        })
+            .populate("user")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
         if (!transactions || transactions.length === 0) {
-            res.json({
+            return res.json({
                 transactions: [],
                 status: "success",
-                message: "you do not have any shipping detail at this time",
+                message: "You do not have any shipping details at this time",
+                pagination: {
+                    total: 0,
+                    page,
+                    limit,
+                    totalPages: 0,
+                    hasNextPage: false,
+                    hasPrevPage: false,
+                },
             });
         }
-        else {
-            res.json({
-                transactions,
-                status: "success",
-                message: "all shipping details fetched successfully",
-            });
-        }
-    }
-    catch (error) {
-        console.log(error);
-        // return next(errorHandler(500, "server error"));
-        return next((0, errorHandling_middleware_1.errorHandler)(500, "server error"));
-    }
-});
-exports.getAllShippingDetails = getAllShippingDetails;
-// export const buyerConProduct = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   // when buyer agrees that product has been received by pressing an agree button
-//   // const { transaction_id } = req.params;
-//   const { _id } = req.params;
-//   if (!_id) {
-//     return next(errorHandler(400, "Transaction ID is required"));
-//   }
-//   // console.log(transaction_id);
-//   // Find the ShippingDetails record by transaction_id and ensure transaction_status is 'processing'
-//   try {
-//     // const fetchShippingDetails = await ShippingDetails.findOne({
-//     //   transaction_id,
-//     //   // "product.transaction_status": "processing",
-//     // }).populate("product");
-//     // // Find the ShippingDetails by its ID and populate the Product details
-//     // const fetchShippingDetails = await ShippingDetails.findById(_id).populate({
-//     //   path: "product", // Field in ShippingDetails that refers to Product
-//     //   model: "Product", // Ensure it refers to the 'Product' collection
-//     //   select: "transaction_status", // Only populate needed fields
-//     // }); // Assuming 'product' is the field referencing Product model in ShippingDetails
-//     // const fetchShippingDetails = await ShippingDetails.aggregate([
-//     //   {
-//     //     $lookup: {
-//     //       from: "products", // name of the 'Product' collection
-//     //       localField: "product", // field in ShippingDetails that references Product
-//     //       foreignField: "_id", // field in Product collection
-//     //       as: "product",
-//     //     },
-//     //   },
-//     //   { $unwind: "$product" }, // Unwind to access product details directly, // Sort by creation date
-//     // ]);
-//     // Find the ShippingDetails by its ID and populate the Product details
-//     const fetchShippingDetails = await ShippingDetails.findById(_id).populate(
-//       "product"
-//     ); // Assuming 'product' is the field referencing Product model in ShippingDetails
-//     console.log(fetchShippingDetails?.product);
-//     // const tran = fetchShippingDetails?.product;
-//     // type ProductDetails = {
-//     //   transaction_status: string;
-//     // };
-//     // const { transaction_status }: ProductDetails = tran;
-//     // if (!transaction_status) {
-//     //   return next(
-//     //     errorHandler(
-//     //       404,
-//     //       "No shipping details found or transaction already completed"
-//     //     )
-//     //   );
-//     // }
-//     // define type
-//     // type ProductDetails = {
-//     //   transaction_status: string;
-//     // };
-//     // const productDetails = fetchShippingDetails?.product;
-//     // const productDetails = fetchShippingDetails?.product;
-//     // const { transaction_status } = productDetails;
-//     // console.log(transaction_status);
-//     // if (transaction_status !== "processing") {
-//     //   return next(
-//     //     errorHandler(
-//     //       400,
-//     //       "This transaction has already been completed successfully"
-//     //     )
-//     //   );
-//     // }
-//     // a pop that says thank you for using our service,
-//     // transaction_status in product table is updated from processing to successful, we want to identify the particular product to update by getting the transaction_id from the product table through the shipping table and the corresponding shipping id.
-//     // Update the transaction_status in the Product table to 'successful'
-//     // const updatedProduct = await Product.findOneAndUpdate(
-//     //   { transaction_id },
-//     //   { $set: { transaction_status: "successful" } },
-//     //   { new: true }
-//     // );
-//     // const updateProductTransactionStatus = await Product.findOneAndUpdate(
-//     //   { _id: fetchShippingDetails?._id },
-//     //   {
-//     //     transaction_status: "completed",
-//     //   },
-//     //   { new: true }
-//     // );
-//     // if (!updateProductTransactionStatus) {
-//     //   return next(errorHandler(500, "Failed to update product status"));
-//     // }
-//     // send message to buyer for successful escrow run
-//     // send message to seller about buyer's satisfaction and to expect their money soon (24hrs)
-//     // find the reference from paystack and use it to release money to seller
-//     // Handle Paystack reference and payment release (this requires Paystack API integration)
-//     // Example:
-//     // const paystackResponse = await paystackReleaseMoneyToSeller(product.paystack_reference);
-//     res.json({
-//       status: "success",
-//       message: "Product transaction has been completed successfully",
-//       // updateProductTransactionStatus,
-//     });
-//   } catch (error) {
-//     console.log("Error:", error);
-//     return next(errorHandler(500, "Server error"));
-//   }
-// };
-// interface ShippingDetailsWithProduct {
-//   transaction_status: string;
-//   product_id: string;
-//   transaction_id: string;
-//   vendor_name: string;
-//   vendor_email: string;
-//   buyer_email: string;
-//   product_name: string;
-// }
-// export const buyerConfirmsProduct = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   const { transaction_id } = req.body;
-//   console.log("transaction_id", transaction_id);
-//   // const { transaction_id } = req.params;
-//   // if (!transaction_id) {
-//   //   return next(errorHandler(400, "Transaction ID is required"));
-//   // }
-//   if (!transaction_id || !mongoose.Types.ObjectId.isValid(transaction_id)) {
-//     return next(errorHandler(400, "Invalid or missing Transaction ID"));
-//   }
-//   // if (!_id || !mongoose.Types.ObjectId.isValid(_id)) {
-//   //   return next(errorHandler(400, "Invalid or missing Transaction ID"));
-//   // }
-//   // try {
-//   // Find the ShippingDetails by its ID and populate the Product details
-//   // const fetchShippingDetails = await ShippingDetails?.aggregate([
-//   //   { $match: { _id: mongoose.Types.ObjectId.createFromHexString(_id) } },
-//   //   {
-//   //     $lookup: {
-//   //       from: "products", // Join with the 'products' collection
-//   //       localField: "product", // Field in ShippingDetails referring to Product
-//   //       foreignField: "_id", // The _id field in the Product collection
-//   //       as: "productDetails", // Name of the new field containing joined data
-//   //     },
-//   //   },
-//   //   { $unwind: "$productDetails" }, // Unwind since it's an array (1 product for each ShippingDetails)
-//   //   {
-//   //     $project: {
-//   //       transaction_status: "$productDetails.transaction_status", // Select transaction_status
-//   //       product_id: "$productDetails._id",
-//   //       transaction_id: "$productDetails.transaction_id",
-//   //       vendor_name: "$productDetails.vendor_name",
-//   //       buyer_email: "$productDetails.buyer_email",
-//   //       product_name: "$productDetails.product_name",
-//   //       vendor_email: "$productDetails.vendor_email",
-//   //     },
-//   //   },
-//   // ]);
-//   try {
-//     // Find the ShippingDetails by its ID and populate the Product details
-//     const fetchShippingDetails: ShippingDetailsWithProduct[] | null =
-//       await ShippingDetails?.aggregate([
-//         // { $match: { _id: new mongoose.Types.ObjectId(_id) } }, // Changed the validation
-//         { $match: { "product.transaction_id": transaction_id } }, // Match based on transaction_id
-//         {
-//           $lookup: {
-//             from: "products",
-//             localField: "product",
-//             foreignField: "_id",
-//             as: "productDetails",
-//           },
-//         },
-//         { $unwind: "$productDetails" },
-//         {
-//           $project: {
-//             transaction_status: "$productDetails.transaction_status",
-//             product_id: "$productDetails._id",
-//             transaction_id: "$productDetails.transaction_id",
-//             vendor_name: "$productDetails.vendor_name",
-//             buyer_email: "$productDetails.buyer_email",
-//             product_name: "$productDetails.product_name",
-//             vendor_email: "$productDetails.vendor_email",
-//           },
-//         },
-//       ]);
-//     // Log to verify what product contains
-//     // console.log("Populated product:", fetchShippingDetails);
-//     if (!fetchShippingDetails || !fetchShippingDetails[0]) {
-//       return next(
-//         errorHandler(
-//           404,
-//           "No shipping details found or transaction already completed"
-//         )
-//       );
-//     }
-//     const {
-//       transaction_status,
-//       product_id,
-//       transaction_id,
-//       vendor_name,
-//       vendor_email,
-//       buyer_email,
-//       product_name,
-//     } = fetchShippingDetails[0];
-//     if (transaction_status !== "processing") {
-//       return next(errorHandler(400, "This transaction has been completed"));
-//     }
-//     // Update the transaction status of the Product
-//     const updateProductTransactionStatus = await Product.findByIdAndUpdate(
-//       product_id,
-//       { transaction_status: "completed" },
-//       { new: true }
-//     );
-//     console.log(
-//       "updateProductTransactionStatus",
-//       updateProductTransactionStatus
-//     );
-//     if (!updateProductTransactionStatus) {
-//       return next(errorHandler(500, "Failed to update product status"));
-//     }
-//     // send message to buyer for successful escrow run
-//     await sendSuccessfulEscrowEmailToInitiator(
-//       transaction_id,
-//       vendor_name,
-//       buyer_email,
-//       product_name
-//     );
-//     // send message to seller about buyer's satisfaction and to expect their money soon (24hrs)
-//     await sendSuccessfulEscrowEmailToVendor(
-//       transaction_id,
-//       vendor_name,
-//       vendor_email,
-//       product_name
-//     );
-//     // find the reference from paystack and use it to release money to seller
-//     // Handle Paystack reference and payment release (this requires Paystack API integration)
-//     // Example:
-//     // const paystackResponse = await paystackReleaseMoneyToSeller(product.paystack_reference);
-//     // send response
-//     res.json({
-//       status: "success",
-//       message: "Escrow has been completed successfully.",
-//     });
-//   } catch (error) {
-//     console.log("Error:", error);
-//     return next(errorHandler(500, "Server error"));
-//   }
-// };
-const buyerConfirmsProduct = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { transaction_id } = req.body;
-    // const { transaction_id } = req.params;
-    if (!transaction_id) {
-        return next((0, errorHandling_middleware_1.errorHandler)(400, "Transaction ID is required"));
-    }
-    const disputeDetails = yield productDispute_model_1.default.findOne({
-        transaction_id: transaction_id,
-    });
-    const disputStatus = disputeDetails === null || disputeDetails === void 0 ? void 0 : disputeDetails.dispute_status;
-    try {
-        // Find the ShippingDetails entry by looking up the transaction_id in the Product
-        const fetchShippingDetails = yield shippingDetails_model_1.default.aggregate([
-            {
-                $lookup: {
-                    from: "products", // The product collection
-                    localField: "product", // ShippingDetails field that links to Product
-                    foreignField: "_id", // _id in Product collection
-                    as: "productDetails", // Resulting array of products
-                },
-            },
-            { $unwind: "$productDetails" }, // Flatten the result array to object
-            {
-                $match: {
-                    "productDetails.transaction_id": transaction_id, // Match transaction_id
-                },
-            },
-            {
-                $project: {
-                    transaction_status: "$productDetails.transaction_status",
-                    product_id: "$productDetails._id",
-                    vendor_name: "$productDetails.vendor_name",
-                    buyer_email: "$productDetails.buyer_email",
-                    product_name: "$productDetails.product_name",
-                    vendor_email: "$productDetails.vendor_email",
-                },
-            },
-        ]);
-        if (!fetchShippingDetails || fetchShippingDetails.length === 0) {
-            return next((0, errorHandling_middleware_1.errorHandler)(404, "No shipping details found or transaction completed"));
-        }
-        const { transaction_status, product_id, vendor_name, vendor_email, buyer_email, product_name, } = fetchShippingDetails[0];
-        if (transaction_status === "completed") {
-            return next((0, errorHandling_middleware_1.errorHandler)(400, "This transaction is already completed"));
-        }
-        // Update the transaction status of the product to "completed"
-        const updateProductTransactionStatus = yield productsTransaction_model_1.default.findByIdAndUpdate(product_id, { transaction_status: "completed" }, { new: true });
-        if (!updateProductTransactionStatus) {
-            return next((0, errorHandling_middleware_1.errorHandler)(500, "Failed to update product status"));
-        }
-        if (disputStatus !== "resolved") {
-            yield productDispute_model_1.default.findByIdAndUpdate(disputeDetails === null || disputeDetails === void 0 ? void 0 : disputeDetails._id, {
-                $set: {
-                    dispute_status: "resolved",
-                },
-            }, { new: true, runValidators: true, useFindAndModify: false } // to return the updated document
-            );
-        }
-        // Send success emails
-        yield (0, productTransaction_mail_1.sendSuccessfulEscrowEmailToInitiator)(transaction_id, vendor_name, buyer_email, product_name);
-        yield (0, productTransaction_mail_1.sendSuccessfulEscrowEmailToVendor)(transaction_id, vendor_name, vendor_email, product_name);
+        // Calculate total pages
+        const totalPages = Math.ceil(total / limit);
         res.json({
+            transactions,
             status: "success",
-            message: "Escrow has been completed successfully.",
+            message: "All shipping details fetched successfully",
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1,
+            },
         });
     }
     catch (error) {
-        console.log("Error:", error);
+        console.error("Error in getAllShippingDetails:", error);
+        return next((0, errorHandling_middleware_1.errorHandler)(500, "Server error"));
+    }
+});
+exports.getAllShippingDetails = getAllShippingDetails;
+// ALTERNATIVE: If you prefer aggregation, use the correct collection name
+const getAllShippingDetailsWithAggregation = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { user_email } = req.params;
+        if (!user_email) {
+            return next((0, errorHandling_middleware_1.errorHandler)(400, "User email is required"));
+        }
+        const transactions = yield shippingDetails_model_1.default.aggregate([
+            {
+                $match: {
+                    $or: [{ vendor_email: user_email }, { buyer_email: user_email }],
+                },
+            },
+            {
+                $lookup: {
+                    from: "producttransactions", // Changed from "products" - use the actual collection name
+                    localField: "product",
+                    foreignField: "_id",
+                    as: "product",
+                },
+            },
+            { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } }, // Added preserveNullAndEmptyArrays
+            { $sort: { createdAt: -1 } },
+        ]);
+        if (!transactions || transactions.length === 0) {
+            return res.json({
+                transactions: [],
+                status: "success",
+                message: "You do not have any shipping details at this time",
+            });
+        }
+        res.json({
+            transactions,
+            status: "success",
+            message: "All shipping details fetched successfully",
+        });
+    }
+    catch (error) {
+        console.error("Error in getAllShippingDetails:", error);
+        return next((0, errorHandling_middleware_1.errorHandler)(500, "Server error"));
+    }
+});
+exports.getAllShippingDetailsWithAggregation = getAllShippingDetailsWithAggregation;
+const buyerConfirmsProduct = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { transaction_id } = req.body;
+        if (!transaction_id) {
+            return next((0, errorHandling_middleware_1.errorHandler)(400, "Transaction ID is required"));
+        }
+        console.log(`Processing confirmation for transaction_id: ${transaction_id}`);
+        // Check for existing dispute
+        const disputeDetails = yield productDispute_model_1.default.findOne({ transaction_id });
+        console.log(`Dispute details found: ${disputeDetails ? "Yes" : "No"}`);
+        // Fetch product transaction details directly
+        const fetchProductDetails = yield productsTransaction_model_1.default.findOne({
+            transaction_id,
+        });
+        if (!fetchProductDetails) {
+            return next((0, errorHandling_middleware_1.errorHandler)(404, "Transaction not found"));
+        }
+        console.log("Product transaction found:", JSON.stringify(fetchProductDetails, null, 2));
+        const { transaction_status, _id: product_id, vendor_name, vendor_email, buyer_email, products, } = fetchProductDetails;
+        // Get product name from the first product
+        const product_name = products && products.length > 0 ? products[0].name : "Product";
+        // Check if transaction is already completed
+        if (transaction_status === "completed") {
+            return next((0, errorHandling_middleware_1.errorHandler)(400, "This transaction is already completed"));
+        }
+        // Check if transaction is in processing status (with or without trailing space)
+        const isPending = (transaction_status === null || transaction_status === void 0 ? void 0 : transaction_status.trim().toLowerCase()) === "processing";
+        if (!isPending && transaction_status !== "completed") {
+            return next((0, errorHandling_middleware_1.errorHandler)(400, `Transaction status is ${transaction_status}. Only processing transactions can be confirmed.`));
+        }
+        // Update ProductTransaction status to completed and set buyer_confirm_status to true
+        const updateProductTransactionStatus = yield productsTransaction_model_1.default.findByIdAndUpdate(product_id, {
+            transaction_status: "completed",
+            buyer_confirm_status: true,
+        }, { new: true });
+        if (!updateProductTransactionStatus) {
+            return next((0, errorHandling_middleware_1.errorHandler)(500, "Failed to update product status"));
+        }
+        console.log(`Updated ProductTransaction ${product_id} to completed with buyer confirmation`);
+        // Resolve dispute if exists and not already resolved
+        if (disputeDetails && disputeDetails.dispute_status !== "resolved") {
+            yield productDispute_model_1.default.findByIdAndUpdate(disputeDetails._id, { dispute_status: "resolved" }, { new: true });
+            console.log(`Resolved dispute for transaction ${transaction_id}`);
+        }
+        // Send confirmation emails
+        yield (0, productTransaction_mail_1.sendSuccessfulEscrowEmailToInitiator)(transaction_id, vendor_name, buyer_email, product_name);
+        yield (0, productTransaction_mail_1.sendSuccessfulEscrowEmailToVendor)(transaction_id, vendor_name, vendor_email, product_name);
+        console.log(`Emails sent for transaction ${transaction_id}`);
+        res.json({
+            status: "success",
+            message: "Escrow has been completed successfully.",
+            data: {
+                transaction_id,
+                transaction_status: "completed",
+                buyer_confirm_status: true,
+            },
+        });
+    }
+    catch (error) {
+        console.error("Error in buyerConfirmsProduct:", error);
         return next((0, errorHandling_middleware_1.errorHandler)(500, "Server error"));
     }
 });
 exports.buyerConfirmsProduct = buyerConfirmsProduct;
 const cancelEscrowProductTransaction = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { transaction_id } = req.params;
-    if (!transaction_id)
+    if (!transaction_id) {
         return next((0, errorHandling_middleware_1.errorHandler)(400, "Transaction ID is required"));
+    }
     try {
-        const fetchProductDetails = yield productsTransaction_model_2.default.findOne({
-            transaction_id: transaction_id,
+        const fetchProductDetails = yield productsTransaction_model_1.default.findOne({
+            transaction_id,
         });
-        // Check if transaction exists
         if (!fetchProductDetails) {
             return next((0, errorHandling_middleware_1.errorHandler)(404, "Transaction not found"));
         }
-        // const productTransactionStatus = fetchProductDetails.transaction_status;
-        const productTransactionStatus = fetchProductDetails === null || fetchProductDetails === void 0 ? void 0 : fetchProductDetails.transaction_status;
-        // Check for existing dispute
+        const productTransactionStatus = (_a = fetchProductDetails.transaction_status) === null || _a === void 0 ? void 0 : _a.trim();
         const fetchDisputeDetails = yield productDispute_model_1.default.findOne({
-            transaction_id: transaction_id,
+            transaction_id,
         });
         const productDisputeStatus = fetchDisputeDetails === null || fetchDisputeDetails === void 0 ? void 0 : fetchDisputeDetails.dispute_status;
-        // Validation checks
         if (productTransactionStatus === "cancelled") {
-            return next((0, errorHandling_middleware_1.errorHandler)(400, "This transaction cannot be cancelled because it has already been cancelled"));
+            return next((0, errorHandling_middleware_1.errorHandler)(400, "This transaction has already been cancelled"));
         }
-        else if (productTransactionStatus === "completed") {
-            return next((0, errorHandling_middleware_1.errorHandler)(400, "This transaction cannot be cancelled because it has already been completed"));
+        if (productTransactionStatus === "completed") {
+            return next((0, errorHandling_middleware_1.errorHandler)(400, "This transaction has already been completed"));
         }
-        else if (productDisputeStatus === "resolved") {
-            return next((0, errorHandling_middleware_1.errorHandler)(400, "This transaction cannot be cancelled because it has already been resolved"));
+        if (productDisputeStatus === "resolved") {
+            return next((0, errorHandling_middleware_1.errorHandler)(400, "This transaction has already been resolved"));
         }
-        // Update the product transaction status to "cancelled"
-        const updateProductTransactionStatus = yield productsTransaction_model_2.default.findByIdAndUpdate(fetchProductDetails._id, { transaction_status: "cancelled" }, { new: true });
+        const updateProductTransactionStatus = yield productsTransaction_model_1.default.findByIdAndUpdate(fetchProductDetails._id, { transaction_status: "cancelled" }, { new: true });
         if (!updateProductTransactionStatus) {
             return next((0, errorHandling_middleware_1.errorHandler)(500, "Failed to update transaction status"));
         }
-        // Only update dispute if it exists
         if (fetchDisputeDetails) {
-            const updateProductDisputeStatus = yield productDispute_model_1.default.findByIdAndUpdate(fetchDisputeDetails._id, { dispute_status: "cancelled" }, { new: true });
-            if (!updateProductDisputeStatus) {
-                return next((0, errorHandling_middleware_1.errorHandler)(500, "Failed to update dispute status"));
-            }
+            yield productDispute_model_1.default.findByIdAndUpdate(fetchDisputeDetails._id, { dispute_status: "cancelled" }, { new: true });
         }
-        // TODO: Uncomment and implement email notifications
-        // await sendTransactionCancellationMailToBuyer(
-        //   buyer_email,
-        //   product_name,
-        //   dispute_description
-        // );
-        // await sendTransactionCancellationMailToSeller(
-        //   vendor_email,
-        //   product_name,
-        //   dispute_description
-        // );
         res.json({
             status: "success",
             message: "Transaction has been cancelled successfully",
         });
     }
     catch (error) {
-        console.error("Error cancelling transaction:", error);
         return next((0, errorHandling_middleware_1.errorHandler)(500, "Internal server error"));
     }
 });

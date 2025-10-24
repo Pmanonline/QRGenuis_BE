@@ -38,13 +38,10 @@ const shippingDetailSchema = new mongoose_1.default.Schema({
     user: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: "IndividualUser", // Reference to User model
-        // required: true,
     },
     product: {
         type: mongoose_1.Schema.Types.ObjectId,
-        ref: "Product", // Reference to product model
-        // required: true,
-        //   WE HAVE TO MAKE THIS UNIQUE
+        ref: "ProductTransaction", // ✅ FIXED: Changed from "Product" to "ProductTransaction"
     },
     shipping_company: {
         type: String,
@@ -60,7 +57,6 @@ const shippingDetailSchema = new mongoose_1.default.Schema({
     },
     delivery_person_email: {
         type: String,
-        // required: true,
     },
     delivery_date: {
         type: String,

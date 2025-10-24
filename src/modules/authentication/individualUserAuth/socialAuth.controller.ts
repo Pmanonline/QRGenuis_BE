@@ -257,7 +257,7 @@ export const handleXLogin = async (req: any, res: any) => {
     // Send welcome email for new users
     if (isNewUser && xData.email) {
       try {
-        await sendWelcomeEmail(user.email, user.name || screenName);
+        await sendWelcomeEmail(user.email, user.name);
       } catch (emailError) {
         console.error("Failed to send X welcome email:", emailError);
       }

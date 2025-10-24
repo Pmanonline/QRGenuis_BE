@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { validateProductFields } from "./productsTransaction.validation";
-import IndividualUser from "../../authentication/individualUserAuth/individualUserAuth.model1";
+import IndividualUser from "../../authentication/individualUserAuth/individualUserAuth.model";
 import { errorHandler } from "../../../middlewares/errorHandling.middleware";
 
 import ProductTransaction from "./productsTransaction.model";
@@ -1471,9 +1471,6 @@ export const buyerConfirmsProduct = async (
     return next(errorHandler(500, "Server error"));
   }
 };
-
-
-
 
 export const cancelEscrowProductTransaction = async (
   req: Request,

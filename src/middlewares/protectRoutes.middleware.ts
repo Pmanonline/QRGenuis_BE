@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import IndividualUser from "../modules/authentication/individualUserAuth/individualUserAuth.model1";
+import IndividualUser from "../modules/authentication/individualUserAuth/individualUserAuth.model";
 import OrganizationModel from "../modules/authentication/organizationUserAuth/organizationAuth.model";
 
 const protectRoutes = async (

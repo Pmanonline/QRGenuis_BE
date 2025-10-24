@@ -12,259 +12,320 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getGoogleUserDetail = exports.getUserDetails = exports.getGoogleUrl = exports.resetIndividualPassword = exports.individualUserRegistrationGoogle = exports.individualUserRegistration = void 0;
+exports.forgotPassword = exports.verifyEmail = exports.resetIndividualPassword = exports.individualUserLogin = exports.individualUserRegistration = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const individualUserAuth_model1_1 = __importDefault(require("./individualUserAuth.model1"));
+const crypto_1 = __importDefault(require("crypto"));
+const individualUserAuth_model_1 = __importDefault(require("./individualUserAuth.model"));
 const individualAuthPasswordToken_1 = __importDefault(require("./individualAuthPasswordToken"));
 const email_utils_1 = require("../../../utilities/email.utils");
 const organizationAuth_model_1 = __importDefault(require("../organizationUserAuth/organizationAuth.model"));
-// import { createSessionAndSendTokens } from "../../../../utilities/createSessionAndSendToken.util";
 const bcrypt_1 = __importDefault(require("bcrypt"));
-const signAndVerifyToken_util_1 = require("../../../utilities/signAndVerifyToken.util");
-const google_auth_library_1 = require("google-auth-library");
 const createSessionAndSendToken_util_1 = require("../../../utilities/createSessionAndSendToken.util");
-const individualUserRegistration = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const individualUserRegistration = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, phone_number, password, confirm_password } = req.body;
-        if (!email) {
-            res.status(400).json({
+        if (!email || !phone_number || !password || !confirm_password) {
+            const error = {
+                statusCode: 400,
                 status: "fail",
-                message: "Email is required",
-            });
-        }
-        else if (!phone_number) {
-            res.status(400).json({
-                status: "fail",
-                message: "Phone number is required",
-            });
-        }
-        else if (!password) {
-            res.status(400).json({
-                status: "fail",
-                message: "Password is required",
-            });
-        }
-        else if (!confirm_password) {
-            res.status(400).json({
-                status: "fail",
-                message: "Confirm password is required",
-            });
+                message: "All fields (email, phone_number, password, confirm_password) are required",
+            };
+            return next(error);
         }
         if (password !== confirm_password) {
-            res.status(401).json({
+            const error = {
+                statusCode: 401,
                 status: "fail",
                 message: "Password do not match",
-            });
+            };
+            return next(error);
         }
-        // Check if the user already exists
-        const individualEmailAlreadyExist = yield individualUserAuth_model1_1.default.findOne({
-            email,
-        });
+        const individualEmailAlreadyExist = yield individualUserAuth_model_1.default.findOne({ email });
         const organizationEmailAlreadyExist = yield organizationAuth_model_1.default.findOne({
             email,
         });
         if (individualEmailAlreadyExist || organizationEmailAlreadyExist) {
-            res.status(400).json({
-                status: "false",
+            const error = {
+                statusCode: 400,
+                status: "fail",
                 message: "User already exists, please proceed to login",
-            });
+            };
+            return next(error);
         }
-        // Create a new user
-        const newUser = new individualUserAuth_model1_1.default({
+        const newUser = new individualUserAuth_model_1.default({
             email,
             phone_number,
             password,
-            role: "ind",
+            role: "user",
         });
-        // Save the user to the database
         yield newUser.save();
-        const verificationToken = jsonwebtoken_1.default.sign({
-            email: newUser.email,
-        }, process.env.JWT_SECRET, {
-            expiresIn: 2 * 60,
-        });
+        const verificationToken = jsonwebtoken_1.default.sign({ email: newUser.email }, process.env.JWT_SECRET, { expiresIn: "2h" });
         yield (0, email_utils_1.sendVerificationEmail)(email, verificationToken);
-        // Send a response
         res.status(201).json({
             status: "true",
-            message: "Account is unverified! Verification email sent. Verify account to continue. Please note that token expires in an hour",
+            message: "Account is unverified! Verification email sent. Verify account to continue. Please note that token expires in 2 hours",
         });
     }
     catch (error) {
-        console.error("Error registering the user:", error);
-        res.status(500).json({ message: "Error registering the user", error });
+        const errResponse = {
+            statusCode: 500,
+            status: "error",
+            message: "Error registering the user",
+            stack: error instanceof Error ? { stack: error.stack } : undefined,
+        };
+        next(errResponse);
     }
 });
 exports.individualUserRegistration = individualUserRegistration;
-const individualUserRegistrationGoogle = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { email, phone_number } = req.body;
+const individualUserLogin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const individualUserToLogin = yield individualUserAuth_model1_1.default.findOne({
-            email,
-        }).select("+password");
-        if (individualUserToLogin) {
-            const token = signAndVerifyToken_util_1.signJwt.toString();
-            // const token = signJwt();
-            res.cookie("access_token", token, { httpOnly: true }).status(200).json();
+        const { email, password } = req.body;
+        if (!email || !password) {
+            const error = {
+                statusCode: 400,
+                status: "fail",
+                message: "Email and password are required",
+            };
+            return next(error);
         }
-        else {
-            const generatedPassword = Math.random().toString(36).slice(-8);
-            const hashedPassword = bcrypt_1.default.hashSync(generatedPassword, 10);
-            // Create a new user
-            const newUser = new individualUserAuth_model1_1.default({
-                email,
-                phone_number,
-                password: hashedPassword,
-                role: "ind",
-                email_verified: true,
+        const user = yield individualUserAuth_model_1.default.findOne({ email }).select("+password");
+        if (!user || !user.password) {
+            const error = {
+                statusCode: 404,
+                status: "fail",
+                message: "User not found",
+            };
+            return next(error);
+        }
+        const isMatch = yield bcrypt_1.default.compare(password, user.password);
+        if (!isMatch) {
+            const error = {
+                statusCode: 401,
+                status: "fail",
+                message: "Invalid email or password",
+            };
+            return next(error);
+        }
+        if (!user.email_verified) {
+            const error = {
+                statusCode: 403,
+                status: "fail",
+                message: "Please verify your email first",
+            };
+            return next(error);
+        }
+        const userData = {
+            _id: user._id,
+            email: user.email,
+            role: user.role,
+            phone_number: user.phone_number,
+        };
+        // ADMIN: OTP
+        if (user.role === "admin") {
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            // Extract username *once* – optional, only if you use it later
+            const username = user.email.split("@")[0];
+            user.otp = otp;
+            user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+            yield user.save();
+            // Correct call – only 2 arguments
+            yield (0, email_utils_1.sendOTPEmail)(email, otp);
+            return res.status(200).json({
+                message: "OTP sent to your email",
+                requireOTP: true,
+                user: userData,
             });
-            yield newUser.save();
-            const token = signAndVerifyToken_util_1.signJwt.toString();
-            res.cookie("access_token", token, { httpOnly: true }).status(200).json();
         }
+        // REGULAR USER: Tokens
+        const tokens = yield (0, createSessionAndSendToken_util_1.createSessionAndSendTokens)({
+            user: user.toObject(),
+            userAgent: req.get("user-agent") || "unknown",
+            role: user.role,
+            message: "Login successful",
+        });
+        user.refreshToken = tokens.refreshToken;
+        yield user.save();
+        return res.status(200).json({
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            user: userData,
+        });
     }
     catch (error) {
-        console.log(error);
-        next(error);
+        const errResponse = {
+            statusCode: 500,
+            status: "error",
+            message: "Error logging in",
+            stack: error instanceof Error ? { stack: error.stack } : undefined,
+        };
+        next(errResponse);
     }
 });
-exports.individualUserRegistrationGoogle = individualUserRegistrationGoogle;
-const resetIndividualPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { email, password } = req.body;
+exports.individualUserLogin = individualUserLogin;
+const resetIndividualPassword = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Find the user by email
-        const user = yield individualUserAuth_model1_1.default.findOne({ email });
-        if (!user) {
-            res.status(400).json({ message: "User not found!" });
-            return;
+        const { token, password } = req.body;
+        if (!token || !password) {
+            const error = {
+                statusCode: 400,
+                status: "fail",
+                message: "Token and password are required",
+            };
+            return next(error);
         }
-        // Update the user's password
+        // Hash incoming token
+        const hashedToken = crypto_1.default.createHash("sha256").update(token).digest("hex");
+        // Find valid, non-expired token
+        const passwordToken = yield individualAuthPasswordToken_1.default.findOne({
+            token: hashedToken,
+            expiresAt: { $gt: new Date() },
+        });
+        if (!passwordToken) {
+            const error = {
+                statusCode: 400,
+                status: "fail",
+                message: "Invalid or expired reset token",
+            };
+            return next(error);
+        }
+        // Find user
+        const user = yield individualUserAuth_model_1.default.findById(passwordToken.owner);
+        if (!user) {
+            const error = {
+                statusCode: 404,
+                status: "fail",
+                message: "User not found",
+            };
+            return next(error);
+        }
+        // Update password (hashed by pre-save)
         user.password = password;
         yield user.save();
-        // Find the user ID
-        const userId = user._id;
-        // Delete the password reset token
-        yield individualAuthPasswordToken_1.default.findOneAndDelete({ owner: userId });
-        res.json({ message: "Password reset successfully!" });
+        // Delete token
+        yield individualAuthPasswordToken_1.default.findByIdAndDelete(passwordToken._id);
+        return res.status(200).json({
+            status: "success",
+            message: "Password reset successfully",
+        });
     }
     catch (error) {
-        console.error("Error resetting password:", error);
-        res.status(500).json({ message: "Error resetting password" });
+        const errResponse = {
+            statusCode: 500,
+            status: "error",
+            message: "Error resetting password",
+            stack: error instanceof Error ? { stack: error.stack } : undefined,
+        };
+        next(errResponse);
     }
 });
 exports.resetIndividualPassword = resetIndividualPassword;
-const getGoogleUrl = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const oAuth2Client = new google_auth_library_1.OAuth2Client(process.env.GOOGLE_OAUTH_CLIENT_ID, process.env.GOOGLE_OAUTH_CLIENT_SECRET, process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL);
-    const authorizeUrl = oAuth2Client.generateAuthUrl({
-        access_type: "offline",
-        prompt: "consent",
-        scope: [
-            "https://www.googleapis.com/auth/userinfo.profile",
-            "https://www.googleapis.com/auth/userinfo.email",
-        ],
-        redirect_uri: process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL,
-    });
-    res.json({ authorizeUrl });
-});
-exports.getGoogleUrl = getGoogleUrl;
-const getUserDetails = (access_token) => __awaiter(void 0, void 0, void 0, function* () {
-    const response = yield fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${access_token}`);
-    if (!response.ok) {
-        throw new Error();
-    }
-    const data = response.json();
-    return data;
-});
-exports.getUserDetails = getUserDetails;
-/**
- * Retrieves the details of a Google user using the provided authorization code.
- * @param req - The request object.
- * @param res - The response object.
- * @param next - The next function.
- */
-const getGoogleUserDetail = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const verifyEmail = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { code } = req.body;
-        if (!code) {
-            res.status(400).json({ message: "Missing authorization code" });
-        }
-        const oAuth2Client = new google_auth_library_1.OAuth2Client(process.env.GOOGLE_OAUTH_CLIENT_ID, process.env.GOOGLE_OAUTH_CLIENT_SECRET, process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL);
-        const { tokens } = yield oAuth2Client.getToken({
-            code,
-            redirect_uri: process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL,
-        });
-        oAuth2Client.setCredentials(tokens);
-        const userDetails = yield (0, exports.getUserDetails)(tokens.access_token);
-        if (!userDetails.email_verified) {
-            res.status(401).json({
-                status: "failed",
-                message: "Google user not verified",
-            });
-        }
-        const { name, email, email_verified, picture, sub } = userDetails;
-        // Check if the user already exists
-        const individualEmailAlreadyExist = yield individualUserAuth_model1_1.default.findOne({
-            email,
-        });
-        const organizationEmailAlreadyExist = yield organizationAuth_model_1.default.findOne({
-            organization_email: email,
-        });
-        if (individualEmailAlreadyExist &&
-            individualEmailAlreadyExist.role === "ind") {
-            res.status(400).json({
-                status: "false",
-                message: "Kindly login with your email and password as account was not registered with google",
-            });
-        }
-        if (organizationEmailAlreadyExist) {
-            res.status(400).json({
-                status: "false",
-                message: "User already exist as an organization. Kindly login as an organization to continue",
-            });
-        }
-        const googleUserExist = individualEmailAlreadyExist === null || individualEmailAlreadyExist === void 0 ? void 0 : individualEmailAlreadyExist.sub;
-        if (!googleUserExist) {
-            const newUser = yield individualUserAuth_model1_1.default.create({
-                name,
-                email,
-                email_verified,
-                picture,
-                sub,
-                role: "g-ind",
-            });
-            const createSessionAndSendTokensOptions = {
-                user: newUser.toObject(),
-                userAgent: req.get("user-agent") || "",
-                role: newUser.role,
-                message: "Individual Google user successfully created",
+        const { token } = req.query;
+        if (!token || typeof token !== "string") {
+            const error = {
+                statusCode: 400,
+                status: "fail",
+                message: "Invalid or missing token",
             };
-            const { status, message, user, accessToken, refreshToken } = yield (0, createSessionAndSendToken_util_1.createSessionAndSendTokens)(createSessionAndSendTokensOptions);
-            res.status(201).json({
-                status,
-                message,
-                user,
-                refreshToken,
-                accessToken,
-            });
+            return next(error);
         }
-        const createSessionAndSendTokensOptions = {
-            user: individualEmailAlreadyExist === null || individualEmailAlreadyExist === void 0 ? void 0 : individualEmailAlreadyExist.toObject(),
-            userAgent: req.get("user-agent") || "",
-            role: "g-ind",
-            message: "Individual Google user successfully logged in",
-        };
-        const { status, message, user, accessToken, refreshToken } = yield (0, createSessionAndSendToken_util_1.createSessionAndSendTokens)(createSessionAndSendTokensOptions);
-        res.status(200).json({
-            status,
-            message,
-            user,
-            accessToken,
-            refreshToken,
+        let decoded;
+        try {
+            decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+        }
+        catch (err) {
+            const error = {
+                statusCode: 400,
+                status: "fail",
+                message: "Invalid or expired verification token",
+            };
+            return next(error);
+        }
+        const user = yield individualUserAuth_model_1.default.findOne({ email: decoded.email });
+        if (!user) {
+            const error = {
+                statusCode: 404,
+                status: "fail",
+                message: "User not found",
+            };
+            return next(error);
+        }
+        if (user.email_verified) {
+            const error = {
+                statusCode: 400,
+                status: "fail",
+                message: "Email already verified",
+            };
+            return next(error);
+        }
+        user.email_verified = true;
+        yield user.save();
+        // Send welcome email after successful verification
+        yield (0, email_utils_1.sendWelcomeEmail)(user.email, user.name);
+        return res.status(200).json({
+            status: "success",
+            message: "Email verified successfully",
         });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }
-    catch (err) {
-        next(err);
+    catch (error) {
+        const errResponse = {
+            statusCode: 500,
+            status: "error",
+            message: "Error verifying email",
+            stack: error instanceof Error ? { stack: error.stack } : undefined,
+        };
+        next(errResponse);
     }
 });
-exports.getGoogleUserDetail = getGoogleUserDetail;
+exports.verifyEmail = verifyEmail;
+const forgotPassword = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            const error = {
+                statusCode: 400,
+                status: "fail",
+                message: "Email is required",
+            };
+            return next(error);
+        }
+        const user = yield individualUserAuth_model_1.default.findOne({ email });
+        if (!user) {
+            return res.status(200).json({
+                status: "success",
+                message: "If the email exists, a reset link has been sent",
+            });
+        }
+        // Generate raw token
+        const resetToken = crypto_1.default.randomBytes(32).toString("hex");
+        const hashedToken = crypto_1.default
+            .createHash("sha256")
+            .update(resetToken)
+            .digest("hex");
+        // Delete old tokens
+        yield individualAuthPasswordToken_1.default.deleteMany({ owner: user._id });
+        // Save new token
+        yield new individualAuthPasswordToken_1.default({
+            owner: user._id,
+            token: hashedToken,
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        }).save();
+        const resetUrl = `${req.protocol}://${req.get("host")}/reset-password?token=${resetToken}`;
+        yield (0, email_utils_1.sendPasswordResetEmail)(email, resetUrl);
+        return res.status(200).json({
+            status: "success",
+            message: "Password reset link sent",
+        });
+    }
+    catch (error) {
+        const errResponse = {
+            statusCode: 500,
+            status: "error",
+            message: "Error sending reset email",
+            stack: error instanceof Error ? { stack: error.stack } : undefined,
+        };
+        next(errResponse);
+    }
+});
+exports.forgotPassword = forgotPassword;

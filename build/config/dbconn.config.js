@@ -18,6 +18,7 @@ dotenv_1.default.config();
 const connectDB = () => __awaiter(void 0, void 0, void 0, function* () {
     const DATABASE_URI = process.env.DATABASE_URI;
     try {
+        // await mongoose.connect(DATABASE_URI);
         yield mongoose_1.default.connect(DATABASE_URI);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }

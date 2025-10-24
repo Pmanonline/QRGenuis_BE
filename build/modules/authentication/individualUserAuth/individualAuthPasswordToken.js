@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = require("mongoose");
 const bcrypt_1 = require("bcrypt");
-// Expire token after 1 hour
+// === Schema ===
 const passwordTokenSchema = new mongoose_1.Schema({
     owner: {
         type: mongoose_1.Schema.Types.ObjectId,
@@ -22,25 +22,29 @@ const passwordTokenSchema = new mongoose_1.Schema({
         type: String,
         required: true,
     },
-    createdAt: {
+    expiresAt: {
         type: Date,
-        expires: 3600,
-        default: Date.now,
+        required: true,
+        default: () => new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+        index: { expires: "10m" }, // MongoDB TTL index
     },
-});
+}, { timestamps: false } // We manage expiry manually
+);
+// === Hash token before save ===
 passwordTokenSchema.pre("save", function (next) {
     return __awaiter(this, void 0, void 0, function* () {
-        // Hash the token
         if (this.isModified("token")) {
             this.token = yield (0, bcrypt_1.hash)(this.token, 10);
         }
         next();
     });
 });
-passwordTokenSchema.methods.compareToken = function (token) {
+// === Compare token method ===
+passwordTokenSchema.methods.compareToken = function (candidateToken) {
     return __awaiter(this, void 0, void 0, function* () {
-        const result = yield (0, bcrypt_1.compare)(token, this.token);
-        return result;
+        return yield (0, bcrypt_1.compare)(candidateToken, this.token);
     });
 };
-exports.default = (0, mongoose_1.model)("PasswordToken", passwordTokenSchema);
+// === Create model ===
+const PasswordToken = (0, mongoose_1.model)("PasswordToken", passwordTokenSchema);
+exports.default = PasswordToken;

@@ -261,3 +261,4 @@ individualRouter.post("/facebook", asyncHandler(handleFacebookLogin));
  *                 type: string
  */
 individualRouter.post("/x", asyncHandler(handleXLogin));
+export default individualRouter;

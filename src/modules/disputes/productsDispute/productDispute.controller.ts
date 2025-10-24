@@ -893,7 +893,7 @@
 
 import { Request, Response, NextFunction } from "express";
 import { validateFormFields } from "../../../utilities/validation.utilities";
-import IndividualUser from "../../authentication/individualUserAuth/individualUserAuth.model1";
+import IndividualUser from "../../authentication/individualUserAuth/individualUserAuth.model";
 import ProductTransaction from "../../transactions/productsTransaction/productsTransaction.model";
 import ProductDispute from "./productDispute.model";
 import { errorHandler } from "../../../middlewares/errorHandling.middleware";

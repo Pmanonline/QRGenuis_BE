@@ -1,13 +1,15 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { Request, Response, NextFunction } from "express";
-import IndividualUser from "./individualUserAuth.model1";
-import individualAuthPasswordToken from "./individualAuthPasswordToken";
-import { sendVerificationEmail } from "../../../utilities/email.utils";
+import IndividualUser from "./individualUserAuth.model";
+import PasswordToken from "./individualAuthPasswordToken";
 import {
+  sendVerificationEmail,
   sendOTPEmail,
   sendPasswordResetEmail,
+  sendWelcomeEmail,
 } from "../../../utilities/email.utils";
+
 import OrganizationModel from "../organizationUserAuth/organizationAuth.model";
 import bcrypt from "bcrypt";
 import { signJwt } from "../../../utilities/signAndVerifyToken.util";
@@ -308,6 +310,9 @@ export const verifyEmail = async (
 
     user.email_verified = true;
     await user.save();
+
+    // Send welcome email after successful verification
+    await sendWelcomeEmail(user.email, user.name);
 
     return res.status(200).json({
       status: "success",

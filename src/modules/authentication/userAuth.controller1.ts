@@ -10,7 +10,7 @@ import catchAsync from "../../utilities/catchAsync";
 import { BlacklistedToken } from "../blacklistedTokens/blacklistedToken.model";
 import IndividualUser, {
   IndividualUserDocument,
-} from "./individualUserAuth/individualUserAuth.model1";
+} from "./individualUserAuth/individualUserAuth.model";
 import OrganizationModel, {
   organizationalDoc,
 } from "./organizationUserAuth/organizationAuth.model";

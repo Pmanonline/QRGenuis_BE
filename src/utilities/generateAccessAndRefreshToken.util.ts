@@ -4,7 +4,7 @@ import { signJwt, verifyJwt } from "./signAndVerifyToken.util";
 
 import { Session } from "../modules/sessions/session.model";
 import OrganizationModel from "../modules/authentication/organizationUserAuth/organizationAuth.model";
-import individualUserAuthModel from "../modules/authentication/individualUserAuth/individualUserAuth.model1";
+import individualUserAuthModel from "../modules/authentication/individualUserAuth/individualUserAuth.model";
 
 export function generateAccessAndRefreshToken(
   userObject: object,
