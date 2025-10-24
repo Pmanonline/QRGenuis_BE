@@ -1,50 +1,69 @@
-import { Model, ObjectId, Schema, model } from "mongoose";
+import { Model, Schema, model, Document } from "mongoose";
 import { hash, compare } from "bcrypt";
+import crypto from "crypto";
 
-// Creating interface
-interface PasswordTokenDocument {
-  owner: ObjectId;
+// === Interfaces ===
+export interface PasswordTokenDocument extends Document {
+  owner: Schema.Types.ObjectId;
   token: string;
-  createdAt: Date;
+  expiresAt: Date;
 }
 
-interface Methods {
-  compareToken(token: string): Promise<boolean>;
+interface PasswordTokenMethods {
+  compareToken(candidateToken: string): Promise<boolean>;
 }
 
-// Expire token after 1 hour
-const passwordTokenSchema = new Schema<PasswordTokenDocument, {}, Methods>({
-  owner: {
-    type: Schema.Types.ObjectId,
-    required: true,
-    ref: "IndividualUser",
-  },
-  token: {
-    type: String,
-    required: true,
-  },
-  createdAt: {
-    type: Date,
-    expires: 3600,
-    default: Date.now,
-  },
-});
+type PasswordTokenModel = Model<
+  PasswordTokenDocument,
+  {},
+  PasswordTokenMethods
+>;
 
+// === Schema ===
+const passwordTokenSchema = new Schema<
+  PasswordTokenDocument,
+  PasswordTokenModel,
+  PasswordTokenMethods
+>(
+  {
+    owner: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: "IndividualUser",
+    },
+    token: {
+      type: String,
+      required: true,
+    },
+    expiresAt: {
+      type: Date,
+      required: true,
+      default: () => new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      index: { expires: "10m" }, // MongoDB TTL index
+    },
+  },
+  { timestamps: false } // We manage expiry manually
+);
+
+// === Hash token before save ===
 passwordTokenSchema.pre("save", async function (next) {
-  // Hash the token
   if (this.isModified("token")) {
     this.token = await hash(this.token, 10);
   }
   next();
 });
 
-passwordTokenSchema.methods.compareToken = async function (token) {
-  const result = await compare(token, this.token);
-  return result;
+// === Compare token method ===
+passwordTokenSchema.methods.compareToken = async function (
+  candidateToken: string
+): Promise<boolean> {
+  return await compare(candidateToken, this.token);
 };
 
-export default model("PasswordToken", passwordTokenSchema) as Model<
-  PasswordTokenDocument,
-  {},
-  Methods
->;
+// === Create model ===
+const PasswordToken = model<PasswordTokenDocument, PasswordTokenModel>(
+  "PasswordToken",
+  passwordTokenSchema
+);
+
+export default PasswordToken;

@@ -1,329 +1,263 @@
-// import { Router } from "express";
-// import {
-//   individualUserRegistration,
-//   individualUserRegistrationGoogle,
-//   resetIndividualPassword,
-// } from "../individualUserAuth/individualUserAuth.controller";
-
-// import {
-//   getGoogleUrl,
-//   getGoogleUserDetail,
-// } from "../individualUserAuth/individualUserAuth.controller";
-
-// const individualrouter = Router();
-
-// /**
-//  * @swagger
-//  * tags:
-//  *   name: IndividualUserAuth
-//  *   description: Api endpoint to manage individual auth
-//  */
-
-// /**
-//  * @swagger
-//  *   /auth/individual/signup:
-//  *     post:
-//  *       summary: Sign up an individual user
-//  *       description: Sign up a new user for the organization.
-//  *       tags: [IndividualUserAuth]
-//  *       requestBody:
-//  *         required: true
-//  *         content:
-//  *           application/json:
-//  *             schema:
-//  *               $ref: "#/components/schemas/IndividualUserSignup"
-//  *       responses:
-//  *         '200':
-//  *           description: User successfully signed up
-//  *           content:
-//  *             application/json:
-//  *               schema:
-//  *                 $ref: "#/components/schemas/IndividualUserSignup"
-//  *         '400':
-//  *           $ref: "#/components/responses/400"
-//  *         '401':
-//  *           $ref: "#/components/responses/401"
-//  *
-//  */
-
-// individualrouter.route("/signup").post(individualUserRegistration);
-
-// /**
-//  * @swagger
-//  *   /auth/individual/googleauth:
-//  *     post:
-//  *       summary: Google signup/login
-//  *       description: Sign up a new user using google.
-//  *       tags: [IndividualUserGoogleAuth]
-//  *       requestBody:
-//  *         required: true
-//  *         content:
-//  *           application/json:
-//  *             schema:
-//  *               $ref: "#/components/schemas/IndividualUserSignup"
-//  *       responses:
-//  *         '200':
-//  *           description: User successfully signed up
-//  *           content:
-//  *             application/json:
-//  *               schema:
-//  *                 $ref: "#/components/schemas/IndividualUserGoogleAuth"
-//  *         '400':
-//  *           $ref: "#/components/responses/400"
-//  *         '401':
-//  *           $ref: "#/components/responses/401"
-//  *
-//  */
-
-// individualrouter.route("/googleauth").post(individualUserRegistrationGoogle);
-
-// /**
-//  * @swagger
-//  * /auth/individual/reset-password:
-//  *   post:
-//  *     summary: Reset a user's password
-//  *     tags: [IndividualUserAuth]
-//  *     requestBody:
-//  *       required: true
-//  *       content:
-//  *           application/json:
-//  *             schema:
-//  *               $ref: "#/components/schemas/IndividualUserResetPassword"
-//  *     responses:
-//  *       "200":
-//  *         description: User token
-//  *       "400":
-//  *         description: Bad request
-//  *       "404":
-//  *         description: Not found
-//  *       "403":
-//  *         description: Unauthorized request
-//  *       "500":
-//  *         description: Internal server error
-//  */
-
-// individualrouter.route("/reset-password").post(resetIndividualPassword);
-
-// /**
-//  * @swagger
-//  *   /auth/individual/oauth:
-//  *     post:
-//  *       summary: Get google authorized url; navigate to google consent page; and give google user access
-//  *       tags: [GoogleIndividualUserAuth]
-//  *       responses:
-//  *         '200':
-//  *           description: Google AuthorizedUrl successful gotten
-//  *           content:
-//  *             application/json:
-//  *               schema:
-//  *                 $ref: "#/components/schemas/GoogleOrganizationAccess"
-//  *         '401':
-//  *           $ref: "#/components/responses/401"
-//  */
-
-// individualrouter.get("/oauth", getGoogleUrl);
-// individualrouter.post("/oauth/callback", getGoogleUserDetail);
-
-// export default individualrouter;
-
 import { Router } from "express";
 import {
   individualUserRegistration,
-  individualUserRegistrationGoogle,
+  individualUserLogin,
+  forgotPassword,
   resetIndividualPassword,
-  getGoogleUrl,
-  getGoogleUserDetail,
   verifyEmail,
-  individualUserLogin, // Add this import
 } from "../individualUserAuth/individualUserAuth.controller";
+import { asyncHandler } from "../../../middlewares/asyncHandler.middleware";
 
-const individualrouter = Router();
+import {
+  handleGoogleLogin,
+  handleFacebookLogin,
+  handleXLogin,
+} from "../individualUserAuth/socialAuth.controller";
+
+const individualRouter = Router();
 
 /**
  * @swagger
  * tags:
  *   name: IndividualUserAuth
- *   description: Api endpoint to manage individual auth
+ *   description: API endpoints to manage individual user authentication
  */
 
 /**
  * @swagger
- *   /auth/individual/signup:
- *     post:
- *       summary: Sign up an individual user
- *       description: Sign up a new user for the organization.
- *       tags: [IndividualUserAuth]
- *       requestBody:
- *         required: true
- *         content:
- *           application/json:
- *             schema:
- *               $ref: "#/components/schemas/IndividualUserSignup"
- *       responses:
- *         '200':
- *           description: User successfully signed up
- *           content:
- *             application/json:
- *               schema:
- *                 $ref: "#/components/schemas/IndividualUserSignup"
- *         '400':
- *           $ref: "#/components/responses/400"
- *         '401':
- *           $ref: "#/components/responses/401"
+ * /auth/individual/signup:
+ *   post:
+ *     summary: Register a new individual user
+ *     tags: [IndividualUserAuth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - phone_number
+ *               - password
+ *               - confirm_password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               phone_number:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *               confirm_password:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Verification email sent
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
  */
-individualrouter.route("/signup").post(individualUserRegistration);
+individualRouter.route("/signup").post(individualUserRegistration);
 
 /**
  * @swagger
- *   /auth/individual/login:
- *     post:
- *       summary: Log in an individual user
- *       description: Log in an existing individual user with email and password.
- *       tags: [IndividualUserAuth]
- *       requestBody:
- *         required: true
+ * /auth/individual/login:
+ *   post:
+ *     summary: Login individual user
+ *     tags: [IndividualUserAuth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful (tokens or OTP)
  *         content:
  *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 email:
- *                   type: string
- *                   example: "petersonzoconis1@gmail.com"
- *                 password:
- *                   type: string
- *                   example: "newpassword123"
- *               required:
- *                 - email
- *                 - password
- *       responses:
- *         '200':
- *           description: User successfully logged in
- *           content:
- *             application/json:
- *               schema:
- *                 type: object
- *                 properties:
- *                   status:
- *                     type: string
- *                   message:
- *                     type: string
- *                   token:
- *                     type: string
- *         '400':
- *           $ref: "#/components/responses/400"
- *         '404':
- *           description: User not found
- *         '401':
- *           description: Invalid credentials
+ *             oneOf:
+ *               - $ref: '#/components/schemas/LoginSuccessUser'
+ *               - $ref: '#/components/schemas/LoginSuccessAdminOTP'
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Invalid credentials
+ *       403:
+ *         description: Email not verified
+ *       404:
+ *         description: User not found
  */
-individualrouter.route("/login").post(individualUserLogin); // Add this route
+individualRouter.route("/login").post(asyncHandler(individualUserLogin));
 
 /**
  * @swagger
- *   /auth/individual/googleauth:
- *     post:
- *       summary: Google signup/login
- *       description: Sign up a new user using google.
- *       tags: [IndividualUserGoogleAuth]
- *       requestBody:
- *         required: true
- *         content:
- *           application/json:
- *             schema:
- *               $ref: "#/components/schemas/IndividualUserSignup"
- *       responses:
- *         '200':
- *           description: User successfully signed up
- *           content:
- *             application/json:
- *               schema:
- *                 $ref: "#/components/schemas/IndividualUserGoogleAuth"
- *         '400':
- *           $ref: "#/components/responses/400"
- *         '401':
- *           $ref: "#/components/responses/401"
+ * /auth/individual/forgot-password:
+ *   post:
+ *     summary: Request password reset
+ *     tags: [IndividualUserAuth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Reset link sent (if email exists)
+ *       400:
+ *         description: Email required
+ *       500:
+ *         description: Server error
  */
-individualrouter.route("/googleauth").post(individualUserRegistrationGoogle);
+individualRouter.route("/forgot-password").post(asyncHandler(forgotPassword));
 
 /**
  * @swagger
  * /auth/individual/reset-password:
  *   post:
- *     summary: Reset a user's password
+ *     summary: Reset password with token
  *     tags: [IndividualUserAuth]
  *     requestBody:
  *       required: true
  *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - password
+ *             properties:
+ *               token:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Invalid/expired token
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+individualRouter
+  .route("/reset-password")
+  .post(asyncHandler(resetIndividualPassword));
+
+/**
+ * @swagger
+ * /auth/individual/verify-email:
+ *   get:
+ *     summary: Verify user email
+ *     tags: [IndividualUserAuth]
+ *     parameters:
+ *       - in: query
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: JWT verification token
+ *     responses:
+ *       200:
+ *         description: Email verified
+ *       400:
+ *         description: Invalid/expired token
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+
+individualRouter.route("/verify-email").get(asyncHandler(verifyEmail));
+
+// Social Login Routes
+
+/**
+ * @swagger
+ * /auth/individual/google:
+ *   post:
+ *     summary: Google social login
+ *     tags: [IndividualUserAuth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [credential]
+ *             properties:
+ *               credential:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login success
+ *         content:
  *           application/json:
  *             schema:
- *               $ref: "#/components/schemas/IndividualUserResetPassword"
- *     responses:
- *       "200":
- *         description: User token
- *       "400":
- *         description: Bad request
- *       "404":
- *         description: Not found
- *       "403":
- *         description: Unauthorized request
- *       "500":
- *         description: Internal server error
+ *               $ref: '#/components/schemas/SocialLoginSuccess'
+ *       400:
+ *         description: Invalid token
+ *       403:
+ *         description: Admin blocked
  */
-individualrouter.route("/reset-password").post(resetIndividualPassword);
+individualRouter.post("/google", asyncHandler(handleGoogleLogin));
 
 /**
  * @swagger
- *   /auth/individual/oauth:
- *     get:
- *       summary: Get google authorized url; navigate to google consent page; and give google user access
- *       tags: [GoogleIndividualUserAuth]
- *       responses:
- *         '200':
- *           description: Google AuthorizedUrl successful gotten
- *           content:
- *             application/json:
- *               schema:
- *                 $ref: "#/components/schemas/GoogleOrganizationAccess"
- *         '401':
- *           $ref: "#/components/responses/401"
- */
-individualrouter.get("/oauth", getGoogleUrl);
-individualrouter.post("/oauth/callback", getGoogleUserDetail);
-
-/**
- * @swagger
- *   /auth/individual/verify-email:
- *     get:
- *       summary: Verify individual user email
- *       description: Verify a user's email using the provided token.
- *       tags: [IndividualUserAuth]
- *       parameters:
- *         - in: query
- *           name: token
+ * /auth/individual/facebook:
+ *   post:
+ *     summary: Facebook social login
+ *     tags: [IndividualUserAuth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
  *           schema:
- *             type: string
- *           required: true
- *           description: The JWT token sent via email for verification
- *       responses:
- *         '200':
- *           description: Email verified successfully
- *           content:
- *             application/json:
- *               schema:
- *                 type: object
- *                 properties:
- *                   status:
- *                     type: string
- *                   message:
- *                     type: string
- *         '400':
- *           description: Invalid or expired token
- *         '404':
- *           description: User not found
- *         '500':
- *           description: Internal server error
+ *             type: object
+ *             required: [accessToken]
+ *             properties:
+ *               accessToken:
+ *                 type: string
  */
-individualrouter.get("/verify-email", verifyEmail);
+individualRouter.post("/facebook", asyncHandler(handleFacebookLogin));
 
-export default individualrouter;
+/**
+ * @swagger
+ * /auth/individual/x:
+ *   post:
+ *     summary: X (Twitter) social login
+ *     tags: [IndividualUserAuth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [oauth_token, oauth_verifier]
+ *             properties:
+ *               oauth_token:
+ *                 type: string
+ *               oauth_verifier:
+ *                 type: string
+ */
+individualRouter.post("/x", asyncHandler(handleXLogin));

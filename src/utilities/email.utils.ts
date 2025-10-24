@@ -20,7 +20,7 @@ export const generateMailTransporter = () => {
   return transport;
 };
 
-export const sendOtpEmail = async (otp: string, email: string) => {
+export const sendOTPEmail = async (otp: string, email: string) => {
   const transport = generateMailTransporter();
 
   // const { email, message: customMessage } = options; // Renamed the variable to avoid conflict
@@ -30,6 +30,21 @@ export const sendOtpEmail = async (otp: string, email: string) => {
     to: email,
     from: process.env.VERIFICATION_EMAIL,
     subject: "Reset Password Token",
+    html: emailMessage, // Assign the HTML string directly to the html property
+  });
+};
+export const sendPasswordResetEmail = async (
+  resetUrl: string,
+  email: string
+) => {
+  const transport = generateMailTransporter();
+
+  const emailMessage = `Hi, we just received a request that you forgot your password. Here is your OTP to create a new password: ${resetUrl}`;
+
+  transport.sendMail({
+    to: email,
+    from: process.env.VERIFICATION_EMAIL,
+    subject: "Reset Password link",
     html: emailMessage, // Assign the HTML string directly to the html property
   });
 };

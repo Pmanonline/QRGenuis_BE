@@ -1,120 +1,91 @@
-import mongoose, { Document, model, Model, Schema } from "mongoose";
-import { emailValidator } from "../../../utilities/validator.utils";
-import { hash, compare } from "bcrypt";
-// import bcrypt from "bcryptjs";
+import mongoose, { Document, Model, Schema } from "mongoose";
+import bcrypt from "bcrypt";
 import crypto from "crypto";
+import { emailValidator } from "../../../utilities/validator.utils";
 
 export interface IndividualUserDocument extends Document {
-  orguser: mongoose.Schema.Types.ObjectId; // Reference to the User model
   email: string;
-  sub: string;
-  picture: string;
-  role: string;
-  phone_number: string;
-  password: string;
+  phone_number?: string;
+  password?: string;
+  role: "user" | "admin" | "g-ind";
   email_verified: boolean;
-  passwordChangedAt?: Date;
-  passwordResetExpires?: Date;
-  passwordResetToken?: string;
-  comparePassword(candidatePassword: string): Promise<boolean>;
+  picture?: string;
+  sub?: string;
+  facebookId: String; // Facebook
+  xId: String; // X/Twitter
+
+  // 2FA / session fields
+  otp?: string;
+  otpExpiresAt?: Date;
+  refreshToken?: string;
+
+  comparePassword(candidate: string): Promise<boolean>;
   createPasswordResetToken(): string;
   comparePasswordResetToken(token: string): boolean;
 }
 
-export interface IndividualUserModel extends Model<IndividualUserDocument> {}
-
 const individualUserSchema = new Schema<IndividualUserDocument>(
   {
-    orguser: {
-      type: Schema.Types.ObjectId,
-      ref: "orgUser", // Reference to User model
-    },
-
     email: {
       type: String,
+      required: [true, "Email is required"],
       unique: true,
-      required: [true, "Please tell us your email"],
       lowercase: true,
       trim: true,
-      minlength: [5, "Email must be at least 5 characters"],
-      validate: {
-        validator: emailValidator,
-        message: "Invalid email format",
-      },
+      validate: [emailValidator, "Invalid email format"],
     },
-    phone_number: {
-      type: String,
-      trim: true,
-      required: false,
-    },
-    email_verified: {
-      type: Boolean,
-      default: false,
-    },
-    sub: String,
+    phone_number: { type: String, trim: true },
+    password: { type: String, select: false },
     role: {
       type: String,
-      enum: ["ind", "g-ind"],
-      required: [true, "Please provide role"],
+      enum: ["user", "admin", "g-ind", "fb-ind", "x-ind"],
+      default: "user",
+      required: true,
     },
+    email_verified: { type: Boolean, default: false },
     picture: String,
-    password: {
-      type: String,
-      select: false,
-    },
-    passwordChangedAt: Date,
-    passwordResetToken: String,
-    passwordResetExpires: Date,
+    sub: String,
+
+    // 2FA & refresh token
+    otp: { type: String, select: false },
+    otpExpiresAt: { type: Date, select: false },
+    refreshToken: { type: String, select: false },
   },
   { timestamps: true }
 );
 
-individualUserSchema.pre<IndividualUserDocument>("save", async function (next) {
-  if (this.isModified("password")) {
-    try {
-      const saltRounds = 10;
-      this.password = await hash(this.password, saltRounds);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      next(err);
-    }
-  }
+/* ---------- Password hashing ---------- */
+individualUserSchema.pre("save", async function (next) {
+  if (!this.isModified("password") || !this.password) return next();
+  this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
+/* ---------- Instance methods ---------- */
 individualUserSchema.methods.comparePassword = async function (
-  candidatePassword: string
+  candidate: string
 ) {
-  return await compare(candidatePassword, this.password);
+  return bcrypt.compare(candidate, this.password!);
 };
 
-individualUserSchema.methods.createPasswordResetToken = function (
-  this: IndividualUserDocument
-) {
+individualUserSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");
   this.passwordResetToken = crypto
     .createHash("sha256")
     .update(resetToken)
     .digest("hex");
-  // console.log({ resetToken }, this.passwordResetToken);
-
-  const resetExpires = new Date();
-  resetExpires.setMinutes(resetExpires.getMinutes() + 10); // Add 10 minutes to the current time
-  this.passwordResetExpires = resetExpires;
-
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 min
   return resetToken;
 };
 
 individualUserSchema.methods.comparePasswordResetToken = function (
   token: string
 ) {
-  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
-  return this.passwordResetToken?.token === hashedToken;
+  const hashed = crypto.createHash("sha256").update(token).digest("hex");
+  return this.passwordResetToken === hashed;
 };
 
-const IndividualUser = model<IndividualUserDocument, IndividualUserModel>(
+export default mongoose.model<IndividualUserDocument>(
   "IndividualUser",
   individualUserSchema
 );
-
-export default IndividualUser;

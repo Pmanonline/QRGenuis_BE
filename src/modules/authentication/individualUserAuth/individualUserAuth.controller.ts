@@ -1,335 +1,13 @@
-// import jwt from "jsonwebtoken";
-// // import { NextFunction, Request, Response } from "express";
-// import { NextFunction, Request, Response } from "express";
-
-// import IndividualUser from "./individualUserAuth.model1";
-// import individualAuthPasswordToken from "./individualAuthPasswordToken";
-// import { sendVerificationEmail } from "../../../utilities/email.utils";
-// import OrganizationModel from "../organizationUserAuth/organizationAuth.model";
-// // import { createSessionAndSendTokens } from "../../../../utilities/createSessionAndSendToken.util";
-// import bcrypt from "bcrypt";
-// import { signJwt } from "../../../utilities/signAndVerifyToken.util";
-
-// import { OAuth2Client } from "google-auth-library";
-// import { createSessionAndSendTokens } from "../../../utilities/createSessionAndSendToken.util";
-
-// export const individualUserRegistration = async (
-//   req: Request,
-//   res: Response
-// ) => {
-//   try {
-//     const { email, phone_number, password, confirm_password } = req.body;
-
-//     if (!email) {
-//       res.status(400).json({
-//         status: "fail",
-//         message: "Email is required",
-//       });
-//     } else if (!phone_number) {
-//       res.status(400).json({
-//         status: "fail",
-//         message: "Phone number is required",
-//       });
-//     } else if (!password) {
-//       res.status(400).json({
-//         status: "fail",
-//         message: "Password is required",
-//       });
-//     } else if (!confirm_password) {
-//       res.status(400).json({
-//         status: "fail",
-//         message: "Confirm password is required",
-//       });
-//     }
-
-//     if (password !== confirm_password) {
-//       res.status(401).json({
-//         status: "fail",
-//         message: "Password do not match",
-//       });
-//     }
-
-//     // Check if the user already exists
-//     const individualEmailAlreadyExist = await IndividualUser.findOne({
-//       email,
-//     });
-//     const organizationEmailAlreadyExist = await OrganizationModel.findOne({
-//       email,
-//     });
-
-//     if (individualEmailAlreadyExist || organizationEmailAlreadyExist) {
-//       res.status(400).json({
-//         status: "false",
-//         message: "User already exists, please proceed to login",
-//       });
-//     }
-
-//     // Create a new user
-//     const newUser = new IndividualUser({
-//       email,
-//       phone_number,
-//       password,
-//       role: "ind",
-//     });
-
-//     // Save the user to the database
-//     await newUser.save();
-
-//     const verificationToken = jwt.sign(
-//       {
-//         email: newUser.email,
-//       },
-//       process.env.JWT_SECRET as string,
-//       {
-//         expiresIn: 2 * 60,
-//       }
-//     );
-
-//     await sendVerificationEmail(email, verificationToken);
-
-//     // Send a response
-//     res.status(201).json({
-//       status: "true",
-//       message:
-//         "Account is unverified! Verification email sent. Verify account to continue. Please note that token expires in an hour",
-//     });
-//   } catch (error: unknown) {
-//     console.error("Error registering the user:", error);
-//     res.status(500).json({ message: "Error registering the user", error });
-//   }
-// };
-
-// export const individualUserRegistrationGoogle = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   const { email, phone_number } = req.body;
-
-//   try {
-//     const individualUserToLogin = await IndividualUser.findOne({
-//       email,
-//     }).select("+password");
-
-//     if (individualUserToLogin) {
-//       const token = signJwt.toString();
-//       // const token = signJwt();
-
-//       res.cookie("access_token", token, { httpOnly: true }).status(200).json();
-//     } else {
-//       const generatedPassword = Math.random().toString(36).slice(-8);
-
-//       const hashedPassword = bcrypt.hashSync(generatedPassword, 10);
-
-//       // Create a new user
-//       const newUser = new IndividualUser({
-//         email,
-//         phone_number,
-//         password: hashedPassword,
-//         role: "ind",
-//         email_verified: true,
-//       });
-
-//       await newUser.save();
-
-//       const token = signJwt.toString();
-//       res.cookie("access_token", token, { httpOnly: true }).status(200).json();
-//     }
-//   } catch (error) {
-//     console.log(error);
-//     next(error);
-//   }
-// };
-
-// export const resetIndividualPassword = async (req: Request, res: Response) => {
-//   const { email, password } = req.body;
-
-//   try {
-//     // Find the user by email
-//     const user = await IndividualUser.findOne({ email });
-//     if (!user) {
-//       res.status(400).json({ message: "User not found!" });
-//       return;
-//     }
-
-//     // Update the user's password
-//     user.password = password;
-//     await user.save();
-
-//     // Find the user ID
-//     const userId = user._id;
-
-//     // Delete the password reset token
-//     await individualAuthPasswordToken.findOneAndDelete({ owner: userId });
-
-//     res.json({ message: "Password reset successfully!" });
-//   } catch (error) {
-//     console.error("Error resetting password:", error);
-//     res.status(500).json({ message: "Error resetting password" });
-//   }
-// };
-
-// export const getGoogleUrl = async (req: Request, res: Response) => {
-//   const oAuth2Client = new OAuth2Client(
-//     process.env.GOOGLE_OAUTH_CLIENT_ID,
-//     process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-//     process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL
-//   );
-
-//   const authorizeUrl = oAuth2Client.generateAuthUrl({
-//     access_type: "offline",
-//     prompt: "consent",
-//     scope: [
-//       "https://www.googleapis.com/auth/userinfo.profile",
-//       "https://www.googleapis.com/auth/userinfo.email",
-//     ],
-//     redirect_uri: process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL,
-//   });
-
-//   res.json({ authorizeUrl });
-// };
-
-// export const getUserDetails = async (access_token: string) => {
-//   const response = await fetch(
-//     `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${access_token}`
-//   );
-
-//   if (!response.ok) {
-//     throw new Error();
-//   }
-
-//   const data = response.json();
-//   return data;
-// };
-
-// /**
-//  * Retrieves the details of a Google user using the provided authorization code.
-//  * @param req - The request object.
-//  * @param res - The response object.
-//  * @param next - The next function.
-//  */
-// export const getGoogleUserDetail = async (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => {
-//   try {
-//     const { code } = req.body;
-
-//     if (!code) {
-//       res.status(400).json({ message: "Missing authorization code" });
-//     }
-
-//     const oAuth2Client = new OAuth2Client(
-//       process.env.GOOGLE_OAUTH_CLIENT_ID,
-//       process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-//       process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL
-//     );
-
-//     const { tokens } = await oAuth2Client.getToken({
-//       code,
-//       redirect_uri: process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL,
-//     });
-
-//     oAuth2Client.setCredentials(tokens);
-//     const userDetails = await getUserDetails(tokens.access_token as string);
-
-//     if (!userDetails.email_verified) {
-//       res.status(401).json({
-//         status: "failed",
-//         message: "Google user not verified",
-//       });
-//     }
-
-//     const { name, email, email_verified, picture, sub } = userDetails;
-
-//     // Check if the user already exists
-//     const individualEmailAlreadyExist = await IndividualUser.findOne({
-//       email,
-//     });
-//     const organizationEmailAlreadyExist = await OrganizationModel.findOne({
-//       organization_email: email,
-//     });
-
-//     if (
-//       individualEmailAlreadyExist &&
-//       individualEmailAlreadyExist.role === "ind"
-//     ) {
-//       res.status(400).json({
-//         status: "false",
-//         message:
-//           "Kindly login with your email and password as account was not registered with google",
-//       });
-//     }
-
-//     if (organizationEmailAlreadyExist) {
-//       res.status(400).json({
-//         status: "false",
-//         message:
-//           "User already exist as an organization. Kindly login as an organization to continue",
-//       });
-//     }
-
-//     const googleUserExist = individualEmailAlreadyExist?.sub;
-
-//     if (!googleUserExist) {
-//       const newUser = await IndividualUser.create({
-//         name,
-//         email,
-//         email_verified,
-//         picture,
-//         sub,
-//         role: "g-ind",
-//       });
-
-//       const createSessionAndSendTokensOptions = {
-//         user: newUser.toObject(),
-//         userAgent: req.get("user-agent") || "",
-//         role: newUser.role,
-//         message: "Individual Google user successfully created",
-//       };
-
-//       const { status, message, user, accessToken, refreshToken } =
-//         await createSessionAndSendTokens(createSessionAndSendTokensOptions);
-
-//       res.status(201).json({
-//         status,
-//         message,
-//         user,
-//         refreshToken,
-//         accessToken,
-//       });
-//     }
-
-//     const createSessionAndSendTokensOptions = {
-//       user: individualEmailAlreadyExist?.toObject(),
-//       userAgent: req.get("user-agent") || "",
-//       role: "g-ind",
-//       message: "Individual Google user successfully logged in",
-//     };
-
-//     const { status, message, user, accessToken, refreshToken } =
-//       await createSessionAndSendTokens(createSessionAndSendTokensOptions);
-
-//     res.status(200).json({
-//       status,
-//       message,
-//       user,
-//       accessToken,
-//       refreshToken,
-//     });
-
-//     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-//   } catch (err: any) {
-//     next(err);
-//   }
-// };
-
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { Request, Response, NextFunction } from "express";
 import IndividualUser from "./individualUserAuth.model1";
 import individualAuthPasswordToken from "./individualAuthPasswordToken";
 import { sendVerificationEmail } from "../../../utilities/email.utils";
+import {
+  sendOTPEmail,
+  sendPasswordResetEmail,
+} from "../../../utilities/email.utils";
 import OrganizationModel from "../organizationUserAuth/organizationAuth.model";
 import bcrypt from "bcrypt";
 import { signJwt } from "../../../utilities/signAndVerifyToken.util";
@@ -382,7 +60,7 @@ export const individualUserRegistration = async (
       email,
       phone_number,
       password,
-      role: "ind",
+      role: "user",
     });
 
     await newUser.save();
@@ -429,7 +107,7 @@ export const individualUserLogin = async (
     }
 
     const user = await IndividualUser.findOne({ email }).select("+password");
-    if (!user) {
+    if (!user || !user.password) {
       const error: ErrorResponse = {
         statusCode: 404,
         status: "fail",
@@ -448,11 +126,58 @@ export const individualUserLogin = async (
       return next(error);
     }
 
-    const token = signJwt({ id: user._id, email: user.email, role: user.role });
-    res.cookie("access_token", token, { httpOnly: true }).status(200).json({
-      status: "success",
+    if (!user.email_verified) {
+      const error: ErrorResponse = {
+        statusCode: 403,
+        status: "fail",
+        message: "Please verify your email first",
+      };
+      return next(error);
+    }
+
+    const userData = {
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+      phone_number: user.phone_number,
+    };
+
+    // ADMIN: OTP
+    if (user.role === "admin") {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Extract username *once* – optional, only if you use it later
+      const username = user.email.split("@")[0];
+
+      user.otp = otp;
+      user.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+      await user.save();
+
+      // Correct call – only 2 arguments
+      await sendOTPEmail(email, otp);
+
+      return res.status(200).json({
+        message: "OTP sent to your email",
+        requireOTP: true,
+        user: userData,
+      });
+    }
+
+    // REGULAR USER: Tokens
+    const tokens = await createSessionAndSendTokens({
+      user: user.toObject(),
+      userAgent: req.get("user-agent") || "unknown",
+      role: user.role,
       message: "Login successful",
-      token,
+    });
+
+    user.refreshToken = tokens.refreshToken;
+    await user.save();
+
+    return res.status(200).json({
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: userData,
     });
   } catch (error) {
     const errResponse: ErrorResponse = {
@@ -465,265 +190,68 @@ export const individualUserLogin = async (
   }
 };
 
-export const individualUserRegistrationGoogle = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { email, phone_number } = req.body;
-
-    const individualUserToLogin = await IndividualUser.findOne({
-      email,
-    }).select("+password");
-
-    if (individualUserToLogin) {
-      const token = signJwt({
-        id: individualUserToLogin._id,
-        email,
-        role: individualUserToLogin.role,
-      });
-      res.cookie("access_token", token, { httpOnly: true }).status(200).json({
-        status: "success",
-        message: "Google login successful",
-        token,
-      });
-    } else {
-      const generatedPassword = Math.random().toString(36).slice(-8);
-      const hashedPassword = await bcrypt.hash(generatedPassword, 10);
-
-      const newUser = new IndividualUser({
-        email,
-        phone_number,
-        password: hashedPassword,
-        role: "g-ind",
-        email_verified: true,
-      });
-
-      await newUser.save();
-
-      const token = signJwt({ id: newUser._id, email, role: newUser.role });
-      res.cookie("access_token", token, { httpOnly: true }).status(201).json({
-        status: "success",
-        message: "Google account created and logged in",
-        token,
-      });
-    }
-  } catch (error) {
-    const errResponse: ErrorResponse = {
-      statusCode: 500,
-      status: "error",
-      message: "Error with Google registration/login",
-      stack: error instanceof Error ? { stack: error.stack } : undefined,
-    };
-    next(errResponse);
-  }
-};
-
 export const resetIndividualPassword = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { email, password } = req.body;
+    const { token, password } = req.body;
 
-    const user = await IndividualUser.findOne({ email });
-    if (!user) {
+    if (!token || !password) {
       const error: ErrorResponse = {
         statusCode: 400,
         status: "fail",
-        message: "User not found!",
+        message: "Token and password are required",
       };
       return next(error);
     }
 
+    // Hash incoming token
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    // Find valid, non-expired token
+    const passwordToken = await PasswordToken.findOne({
+      token: hashedToken,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!passwordToken) {
+      const error: ErrorResponse = {
+        statusCode: 400,
+        status: "fail",
+        message: "Invalid or expired reset token",
+      };
+      return next(error);
+    }
+
+    // Find user
+    const user = await IndividualUser.findById(passwordToken.owner);
+    if (!user) {
+      const error: ErrorResponse = {
+        statusCode: 404,
+        status: "fail",
+        message: "User not found",
+      };
+      return next(error);
+    }
+
+    // Update password (hashed by pre-save)
     user.password = password;
     await user.save();
 
-    await individualAuthPasswordToken.findOneAndDelete({ owner: user._id });
+    // Delete token
+    await PasswordToken.findByIdAndDelete(passwordToken._id);
 
-    res.json({ message: "Password reset successfully!" });
+    return res.status(200).json({
+      status: "success",
+      message: "Password reset successfully",
+    });
   } catch (error) {
     const errResponse: ErrorResponse = {
       statusCode: 500,
       status: "error",
       message: "Error resetting password",
-      stack: error instanceof Error ? { stack: error.stack } : undefined,
-    };
-    next(errResponse);
-  }
-};
-
-export const getGoogleUrl = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const oAuth2Client = new OAuth2Client(
-      process.env.GOOGLE_OAUTH_CLIENT_ID,
-      process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-      process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL
-    );
-
-    const authorizeUrl = oAuth2Client.generateAuthUrl({
-      access_type: "offline",
-      prompt: "consent",
-      scope: [
-        "https://www.googleapis.com/auth/userinfo.profile",
-        "https://www.googleapis.com/auth/userinfo.email",
-      ],
-      redirect_uri: process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL,
-    });
-
-    res.json({ authorizeUrl });
-  } catch (error) {
-    const errResponse: ErrorResponse = {
-      statusCode: 500,
-      status: "error",
-      message: "Error generating Google URL",
-      stack: error instanceof Error ? { stack: error.stack } : undefined,
-    };
-    next(errResponse);
-  }
-};
-
-export const getUserDetails = async (access_token: string) => {
-  const response = await fetch(
-    `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${access_token}`
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch user details");
-  }
-
-  return response.json();
-};
-
-export const getGoogleUserDetail = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { code } = req.body;
-
-    if (!code) {
-      const error: ErrorResponse = {
-        statusCode: 400,
-        status: "fail",
-        message: "Missing authorization code",
-      };
-      return next(error);
-    }
-
-    const oAuth2Client = new OAuth2Client(
-      process.env.GOOGLE_OAUTH_CLIENT_ID,
-      process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-      process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL
-    );
-
-    const { tokens } = await oAuth2Client.getToken({
-      code,
-      redirect_uri: process.env.GOOGLE_OAUTH_REDIRECT_URL_INDIVIDUAL,
-    });
-
-    oAuth2Client.setCredentials(tokens);
-    const userDetails = await getUserDetails(tokens.access_token as string);
-
-    if (!userDetails.email_verified) {
-      const error: ErrorResponse = {
-        statusCode: 401,
-        status: "fail",
-        message: "Google user not verified",
-      };
-      return next(error);
-    }
-
-    const { name, email, email_verified, picture, sub } = userDetails;
-
-    const individualEmailAlreadyExist = await IndividualUser.findOne({ email });
-    const organizationEmailAlreadyExist = await OrganizationModel.findOne({
-      organization_email: email,
-    });
-
-    if (
-      individualEmailAlreadyExist &&
-      individualEmailAlreadyExist.role === "ind"
-    ) {
-      const error: ErrorResponse = {
-        statusCode: 400,
-        status: "fail",
-        message:
-          "Kindly login with your email and password as account was not registered with google",
-      };
-      return next(error);
-    }
-
-    if (organizationEmailAlreadyExist) {
-      const error: ErrorResponse = {
-        statusCode: 400,
-        status: "fail",
-        message:
-          "User already exist as an organization. Kindly login as an organization to continue",
-      };
-      return next(error);
-    }
-
-    const googleUserExist = individualEmailAlreadyExist?.sub;
-
-    if (!googleUserExist) {
-      const newUser = await IndividualUser.create({
-        name,
-        email,
-        email_verified,
-        picture,
-        sub,
-        role: "g-ind",
-      });
-
-      const createSessionAndSendTokensOptions = {
-        user: newUser.toObject(),
-        userAgent: req.get("user-agent") || "",
-        role: newUser.role,
-        message: "Individual Google user successfully created",
-      };
-
-      const { status, message, user, accessToken, refreshToken } =
-        await createSessionAndSendTokens(createSessionAndSendTokensOptions);
-
-      res.status(201).json({
-        status,
-        message,
-        user,
-        refreshToken,
-        accessToken,
-      });
-    } else {
-      const createSessionAndSendTokensOptions = {
-        user: individualEmailAlreadyExist?.toObject(),
-        userAgent: req.get("user-agent") || "",
-        role: "g-ind",
-        message: "Individual Google user successfully logged in",
-      };
-
-      const { status, message, user, accessToken, refreshToken } =
-        await createSessionAndSendTokens(createSessionAndSendTokensOptions);
-
-      res.status(200).json({
-        status,
-        message,
-        user,
-        accessToken,
-        refreshToken,
-      });
-    }
-  } catch (error) {
-    const errResponse: ErrorResponse = {
-      statusCode: 500,
-      status: "error",
-      message: "Error processing Google callback",
       stack: error instanceof Error ? { stack: error.stack } : undefined,
     };
     next(errResponse);
@@ -747,11 +275,19 @@ export const verifyEmail = async (
       return next(error);
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
-      email: string;
-    };
-    const user = await IndividualUser.findOne({ email: decoded.email });
+    let decoded: { email: string };
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
+    } catch (err) {
+      const error: ErrorResponse = {
+        statusCode: 400,
+        status: "fail",
+        message: "Invalid or expired verification token",
+      };
+      return next(error);
+    }
 
+    const user = await IndividualUser.findOne({ email: decoded.email });
     if (!user) {
       const error: ErrorResponse = {
         statusCode: 404,
@@ -773,17 +309,78 @@ export const verifyEmail = async (
     user.email_verified = true;
     await user.save();
 
-    res
-      .status(200)
-      .json({ status: "success", message: "Email verified successfully" });
+    return res.status(200).json({
+      status: "success",
+      message: "Email verified successfully",
+    });
   } catch (error) {
     const errResponse: ErrorResponse = {
-      statusCode: error instanceof jwt.JsonWebTokenError ? 400 : 500,
-      status: "fail",
-      message:
-        error instanceof jwt.JsonWebTokenError
-          ? "Invalid or expired token"
-          : "Error verifying email",
+      statusCode: 500,
+      status: "error",
+      message: "Error verifying email",
+      stack: error instanceof Error ? { stack: error.stack } : undefined,
+    };
+    next(errResponse);
+  }
+};
+
+export const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      const error: ErrorResponse = {
+        statusCode: 400,
+        status: "fail",
+        message: "Email is required",
+      };
+      return next(error);
+    }
+
+    const user = await IndividualUser.findOne({ email });
+    if (!user) {
+      return res.status(200).json({
+        status: "success",
+        message: "If the email exists, a reset link has been sent",
+      });
+    }
+
+    // Generate raw token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    // Delete old tokens
+    await PasswordToken.deleteMany({ owner: user._id });
+
+    // Save new token
+    await new PasswordToken({
+      owner: user._id,
+      token: hashedToken,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    }).save();
+
+    const resetUrl = `${req.protocol}://${req.get(
+      "host"
+    )}/reset-password?token=${resetToken}`;
+
+    await sendPasswordResetEmail(email, resetUrl);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Password reset link sent",
+    });
+  } catch (error) {
+    const errResponse: ErrorResponse = {
+      statusCode: 500,
+      status: "error",
+      message: "Error sending reset email",
       stack: error instanceof Error ? { stack: error.stack } : undefined,
     };
     next(errResponse);

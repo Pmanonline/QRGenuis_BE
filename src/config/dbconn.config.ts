@@ -9,7 +9,7 @@ const connectDB = async () => {
   try {
     // await mongoose.connect(DATABASE_URI);
     await mongoose.connect(
-      "mongodb+srv://umoru-admin:3Ode6lAAfIQh0MX7@umoru-dev.2zy4fyn.mongodb.net/MyDoshBox"
+      "mongodb+srv://umoru-admin:3Ode6lAAfIQh0MX7@umoru-dev.2zy4fyn.mongodb.net/QRGenius"
     );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
