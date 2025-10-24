@@ -52,7 +52,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.get("/", (req: Request, res: Response) => {
-  res.json({ msg: "welcome to doshbox api updated test" });
+  res.json({ msg: "welcome to QRGEnius Server!! Happy LIVE!!!" });
 });
 
 app.use("/auth/organization", organizationUserAuthRouter);
